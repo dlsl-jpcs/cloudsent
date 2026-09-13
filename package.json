@@ -1,0 +1,26 @@
+{
+  "name": "cloudsent",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "CloudSent — a digital prayer wall for faith, hope, and community",
+  "workspaces": ["apps/web", "apps/api", "packages/contracts"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev --workspace @cloudsent/api\" \"npm run dev --workspace @cloudsent/web\"",
+    "build": "npm run build --workspace @cloudsent/contracts && npm run build --workspace @cloudsent/api && npm run build --workspace @cloudsent/web",
+    "typecheck": "npm run build --workspace @cloudsent/contracts && npm run typecheck --workspace @cloudsent/api && npm run typecheck --workspace @cloudsent/web",
+    "lint": "npm run lint --workspace @cloudsent/api && npm run lint --workspace @cloudsent/web",
+    "test": "npm run test --workspace @cloudsent/contracts && npm run test --workspace @cloudsent/api && npm run test --workspace @cloudsent/web",
+    "db:migrate": "npm run build --workspace @cloudsent/contracts && npm run db:migrate --workspace @cloudsent/api",
+    "admin:bootstrap": "npm run build --workspace @cloudsent/contracts && npm run admin:bootstrap --workspace @cloudsent/api",
+    "db:seed:demo": "npm run build --workspace @cloudsent/contracts && npm run db:seed:demo --workspace @cloudsent/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": { "node": ">=24" }
+}
