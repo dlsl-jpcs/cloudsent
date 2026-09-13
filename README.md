@@ -1,6 +1,6 @@
 # CloudSent()
 
-CloudSent is a calm, anonymous digital prayer wall built for the capstone SRS in this repository.
+CloudSent is a calm, anonymous digital prayer wall built for the DLSL JPCS Month.
 
 ## Workspaces
 
