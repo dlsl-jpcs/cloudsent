@@ -1,0 +1,40 @@
+.drift-wall {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  perspective: var(--dw-perspective, 1200px);
+  perspective-origin: 50% 50%;
+  background: linear-gradient(145deg, rgba(231, 244, 255, 0.92), rgba(249, 246, 255, 0.96) 52%, rgba(255, 249, 229, 0.92));
+  border: 1px solid rgba(131, 165, 195, 0.34);
+  -webkit-mask-image: radial-gradient(ellipse 80% 88% at 50% 48%, #000 var(--dw-edge), transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 88% at 50% 48%, #000 var(--dw-edge), transparent 100%);
+}
+
+.drift-wall__plane { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: row; transform-style: preserve-3d; cursor: pointer; transform-origin: 50% 50%; will-change: transform; }
+.drift-wall__col { position: relative; width: calc(var(--dw-tile-w) + var(--dw-gap)); transform-style: preserve-3d; }
+.drift-wall__track { display: flex; flex-direction: column; will-change: transform; transform-style: preserve-3d; }
+.drift-wall__tile { position: relative; display: block; width: 100%; height: calc(var(--dw-tile-h) + var(--dw-gap)); flex: 0 0 auto; outline: none; transform-style: preserve-3d; text-decoration: none; color: #22364c; }
+.drift-wall__inner { position: absolute; inset: calc(var(--dw-gap) / 2); display: flex; flex-direction: column; justify-content: space-between; border-radius: var(--dw-radius); overflow: hidden; background: #fff; opacity: var(--dw-dim); transform: translateZ(0); pointer-events: none; box-shadow: 0 8px 24px rgba(74, 105, 133, 0.12); transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.drift-wall__tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(var(--dw-gray)) saturate(0.92); user-select: none; -webkit-user-drag: none; }
+.drift-wall__overlay { position: absolute; inset: 0; background: var(--dw-overlay); opacity: 0.08; pointer-events: none; transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.drift-wall__copy { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 18px 17px 15px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.48)); }
+.drift-wall__copy strong { font-family: Spectral, Georgia, serif; font-size: 1.15rem; font-weight: 600; line-height: 1.08; }
+.drift-wall__copy span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; font-family: Spectral, Georgia, serif; font-size: 0.98rem; line-height: 1.28; }
+.drift-wall__copy small { margin-top: auto; color: #60758a; font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 0.72rem; }
+.drift-wall__tile.is-active .drift-wall__inner, .drift-wall__tile:focus-visible .drift-wall__inner { opacity: 1; transform: translateZ(var(--dw-lift)); box-shadow: 0 24px 60px -18px rgba(49, 75, 98, 0.34); }
+.drift-wall__tile.is-active img, .drift-wall__tile:focus-visible img { filter: grayscale(0) saturate(1.05); }
+.drift-wall__tile.is-active .drift-wall__overlay, .drift-wall__tile:focus-visible .drift-wall__overlay { opacity: 0; }
+.drift-wall__tile:focus-visible .drift-wall__inner { box-shadow: 0 24px 60px -18px rgba(49, 75, 98, 0.34), 0 0 0 2px rgba(255, 255, 255, 0.95); }
+.drift-wall--reduced .drift-wall__plane, .drift-wall--reduced .drift-wall__track { will-change: auto; }
+
+@media (max-width: 760px) {
+  .drift-wall { min-height: 560px; }
+  .drift-wall__copy { padding: 15px 14px 13px; }
+  .drift-wall__copy strong { font-size: 1rem; }
+  .drift-wall__copy span { -webkit-line-clamp: 3; font-size: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drift-wall__plane, .drift-wall__track { will-change: auto; }
+}
