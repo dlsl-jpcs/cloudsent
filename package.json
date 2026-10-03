@@ -6,12 +6,14 @@
   "description": "CloudSent — a digital prayer wall for faith, hope, and community",
   "workspaces": ["apps/web", "apps/api", "packages/contracts"],
   "scripts": {
-    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev --workspace @cloudsent/api\" \"npm run dev --workspace @cloudsent/web\"",
+    "dev": "npm run build --workspace @cloudsent/contracts && concurrently -n api,web -c blue,magenta \"npm run dev --workspace @cloudsent/api\" \"npm run dev --workspace @cloudsent/web\"",
     "build": "npm run build --workspace @cloudsent/contracts && npm run build --workspace @cloudsent/api && npm run build --workspace @cloudsent/web",
     "typecheck": "npm run build --workspace @cloudsent/contracts && npm run typecheck --workspace @cloudsent/api && npm run typecheck --workspace @cloudsent/web",
     "lint": "npm run lint --workspace @cloudsent/api && npm run lint --workspace @cloudsent/web",
     "test": "npm run test --workspace @cloudsent/contracts && npm run test --workspace @cloudsent/api && npm run test --workspace @cloudsent/web",
-    "db:migrate": "npm run build --workspace @cloudsent/contracts && npm run db:migrate --workspace @cloudsent/api",
+    "db:setup": "npm run db:setup --workspace @cloudsent/api",
+    "db:migrate": "npm run db:setup",
+    "db:check": "npm run build --workspace @cloudsent/contracts && npm run db:check --workspace @cloudsent/api",
     "admin:bootstrap": "npm run build --workspace @cloudsent/contracts && npm run admin:bootstrap --workspace @cloudsent/api",
     "db:seed:demo": "npm run build --workspace @cloudsent/contracts && npm run db:seed:demo --workspace @cloudsent/api"
   },

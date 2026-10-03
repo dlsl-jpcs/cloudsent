@@ -56,7 +56,7 @@ Section 2 describes the product at a high level. Section 3 details functional re
 
 ## **2.1 Product Perspective**
 
-CloudSent() is a standalone web application composed of a React-based single-page front end, a Node.js/Express REST API, and a PostgreSQL relational database. It is not part of a larger product family. The system is hosted entirely on free-tier infrastructure suitable for academic deployment: the front end on Vercel, the back end on Render or Railway, and the database on Neon (serverless PostgreSQL).
+CloudSent() is a standalone web application composed of a React-based single-page front end, a Node.js/Express REST API, and a PostgreSQL relational database. It is not part of a larger product family. One Vercel project hosts both the website and API; Supabase hosts the database. The API connects to Supabase over HTTPS with a server-only secret key, while administrator login remains PIN-based.
 
 ## **2.2 Product Functions**
 
@@ -235,10 +235,13 @@ Users shall be able to submit one of five prayer types: Prayer Intention, Thanks
 
 # **5\. System Architecture**
 
-CloudSent() follows a three-tier architecture: a presentation tier (React \+ Tailwind CSS), an application/business-logic tier (Node.js \+ Express REST API), and a data tier (PostgreSQL). Communication between tiers occurs over HTTPS using JSON payloads.
+CloudSent() follows a three-tier architecture: a presentation tier (React + Tailwind CSS), an application/business-logic tier (Node.js + Express API hosted as a Vercel Function), and a data tier (Supabase PostgreSQL). The browser calls the API on the same website under `/api`; the API uses the Supabase server client over HTTPS. Multi-step database changes run in restricted PostgreSQL functions to preserve atomic updates.
 
-|   \+-----------------------+        HTTPS/JSON        \+----------------------------+   |   PRESENTATION TIER   |  \----------------------\> |     APPLICATION TIER       |   |  React \+ Tailwind CSS |  \<---------------------- |   Node.js \+ Express API    |   |  (Vercel)             |                          |   (Render / Railway)       |   \+-----------------------+                          \+--------------+-------------+                                                                      |                                                                      | SQL (pg)                                                                      v                                                       \+----------------------------+                                                       |        DATA TIER           |                                                       |   PostgreSQL (Neon)        |                                                       \+----------------------------+ |
-| :---- |
+```mermaid
+flowchart LR
+  Web["React website (Vercel)"] -->|HTTPS /api| API["CloudSent API (Vercel)"]
+  API -->|Supabase server client| DB["Supabase PostgreSQL"]
+```
 
 *Figure 5.1 — Three-tier system architecture*
 
@@ -500,8 +503,12 @@ The interface shall feel calm, minimalist, peaceful, modern, and inspirational, 
 
 # **15\. Deployment Architecture**
 
-|    Developer                GitHub Repo               Hosting Providers       |                          |                            |       |--git push----------------\>|                            |       |                          |--CI build/deploy hook------\>|       |                          |                             |--\> Vercel (Frontend, React build)       |                          |                             |--\> Render/Railway (Backend API)       |                          |                             |--\> Neon (PostgreSQL database) |
-| :---- |
+```mermaid
+flowchart LR
+  Developer --> GitHub --> Vercel["Vercel website + API"]
+  Vercel -->|HTTPS data requests| Supabase["Supabase PostgreSQL"]
+  Developer -->|SQL Editor setup| Supabase
+```
 
 *Figure 15.1 — Deployment pipeline*
 
@@ -509,9 +516,9 @@ The interface shall feel calm, minimalist, peaceful, modern, and inspirational, 
 
 | Tier | Provider | Notes |
 | :---- | :---- | :---- |
-| Frontend | Vercel | Automatic deploys from main branch; environment variables for API base URL |
-| Backend API | Render or Railway | Node.js service; environment variables for DB connection string and JWT secret |
-| Database | Neon (Serverless PostgreSQL) | Free-tier instance; connection pooling recommended |
+| Frontend | Vercel | Automatic React builds; same-site `/api` requests |
+| Backend API | Vercel | Server function; `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `JWT_SECRET`, `PIN_PEPPER`, and `PUBLIC_ORIGIN` stay in the server environment |
+| Database | Supabase PostgreSQL | Tables and restricted database functions are installed through `supabase/setup.sql` in the SQL Editor; RLS is enabled and only the server role has access |
 
 # **16\. Future Enhancements**
 
@@ -589,4 +596,4 @@ The following decisions are normative for version 1.1:
 
 * The administrator is a single PIN-only account. The 8–12 digit PIN is bcrypt-hashed with a deployment secret, protected by rate limiting and progressive delay, and issued an eight-hour HttpOnly/Secure JWT cookie with CSRF protection. A successful PIN change invalidates existing sessions.
 
-* Core public and administrator flows conform to WCAG 2.1 AA, respect reduced-motion preferences, and use the Cloud Archive visual language. Production uses Node 24 LTS, React/Tailwind, Express, parameterized `pg` queries, PostgreSQL, Vercel, Render, and Neon. Free-tier cold starts are excluded from warmed performance measurements and uptime is a best-effort target.
+* Core public and administrator flows conform to WCAG 2.1 AA, respect reduced-motion preferences, and use the Cloud Archive visual language. Production uses Node 24 LTS, React/Tailwind, Express on Vercel, and Supabase PostgreSQL. The API uses the server secret key over HTTPS and restricted database functions for atomic writes. The administrator dashboard refreshes every 30 seconds while visible and on tab focus, with immediate refresh after actions. Free-tier cold starts are excluded from warmed performance measurements and uptime is a best-effort target.

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { pool } from './db/pool.js';
+import { rpc } from './db/supabase.js';
 import { config } from './config.js';
 import { pseudonym, sourceIdentity } from './moderation.js';
 
@@ -28,15 +28,8 @@ export async function prayerIpVolume(req: Request, _res: Response, next: NextFun
     const key = pseudonym(sourceIdentity(req), config.PIN_PEPPER);
     const windowMs = 60 * 60 * 1000;
     const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs);
-    const result = await pool.query(
-      `INSERT INTO rate_limit_buckets(bucket_key, bucket_name, window_start, count)
-       VALUES ($1, 'prayer-ip-hour', $2, 1)
-       ON CONFLICT (bucket_key, bucket_name, window_start)
-       DO UPDATE SET count = rate_limit_buckets.count + 1
-       RETURNING count`,
-      [key, windowStart],
-    );
-    if (Number(result.rows[0]?.count || 0) > 100) {
+    const count = await rpc<number>('cloudsent_rate_limit', { p_key: key, p_bucket: 'prayer-ip-hour', p_window_start: windowStart.toISOString(), p_since: null });
+    if (count > 100) {
       (req as Request & { prayerIpHighVolume?: boolean }).prayerIpHighVolume = true;
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
@@ -51,17 +44,10 @@ export function rateLimit(limit: Limit) {
       const key = pseudonym(raw, config.PIN_PEPPER);
       const bucketMs = limit.rolling ? 60 * 1000 : limit.windowMs;
       const windowStart = new Date(Math.floor(Date.now() / bucketMs) * bucketMs);
-      const result = await pool.query(
-        `INSERT INTO rate_limit_buckets(bucket_key, bucket_name, window_start, count)
-         VALUES ($1, $2, $3, 1)
-         ON CONFLICT (bucket_key, bucket_name, window_start)
-         DO UPDATE SET count = rate_limit_buckets.count + 1
-         RETURNING count`,
-        [key, limit.bucket, windowStart],
-      );
-      const count = limit.rolling
-        ? Number((await pool.query('SELECT COALESCE(sum(count), 0)::int AS count FROM rate_limit_buckets WHERE bucket_key = $1 AND bucket_name = $2 AND window_start >= $3', [key, limit.bucket, new Date(Date.now() - limit.windowMs)])).rows[0]?.count || 0)
-        : Number(result.rows[0].count);
+      const count = await rpc<number>('cloudsent_rate_limit', {
+        p_key: key, p_bucket: limit.bucket, p_window_start: windowStart.toISOString(),
+        p_since: limit.rolling ? new Date(Date.now() - limit.windowMs).toISOString() : null,
+      });
       if (count > limit.max) {
         const retryAfter = limit.rolling ? Math.max(1, Math.ceil((windowStart.getTime() + bucketMs - Date.now()) / 1000)) : Math.max(1, Math.ceil((windowStart.getTime() + limit.windowMs - Date.now()) / 1000));
         res.setHeader('Retry-After', String(retryAfter));

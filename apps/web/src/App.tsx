@@ -50,8 +50,8 @@ function AdminDashboard() {
       setPrayers(p.data); setReports(r.data); setStats(s.data); setError('');
     } catch (e: any) { if (e.status === 401) navigate('/admin'); else setError(e.message); }
   };
-  useEffect(() => { adminSession().then(() => { setReady(true); refresh(); }).catch(() => navigate('/admin')); }, []);
-  useEffect(() => { if (!ready) return; const timer = window.setInterval(refresh, 30_000); const events = new EventSource('/api/admin/events', { withCredentials: true }); events.onmessage = refresh; events.addEventListener('prayer-created', refresh); events.addEventListener('report-created', refresh); events.addEventListener('prayer-status-changed', refresh); return () => { clearInterval(timer); events.close(); }; }, [ready, statusFilter]);
+  useEffect(() => { adminSession().then(() => { setReady(true); }).catch(() => navigate('/admin')); }, []);
+  useEffect(() => { if (!ready) return; refresh(); const timer = window.setInterval(() => { if (!document.hidden) refresh(); }, 30_000); const onFocus = () => refresh(); window.addEventListener('focus', onFocus); return () => { clearInterval(timer); window.removeEventListener('focus', onFocus); }; }, [ready, statusFilter]);
   if (!ready) return <Shell><main className="page"><div className="loading-state">Opening the dashboard…</div></main></Shell>;
   const logout = async () => { try { await adminLogout(); } finally { navigate('/admin'); } };
   const setStatus = async (id: string, status: string, version: number) => { try { await updatePrayerStatus(id, status, version); refresh(); } catch (e: any) { setError(e.message || 'Could not update status.'); } };
