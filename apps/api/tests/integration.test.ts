@@ -7,6 +7,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import bcrypt from 'bcryptjs';
+import cookieParser from 'cookie-parser';
 
 let db: PGlite;
 let gateway: Server;
@@ -82,7 +83,19 @@ beforeAll(async () => {
   vi.stubEnv('NODE_ENV', 'test'); vi.stubEnv('SUPABASE_URL', url); vi.stubEnv('SUPABASE_SECRET_KEY', secretKey);
   vi.stubEnv('JWT_SECRET', 'test-only-jwt-secret-at-least-32-characters'); vi.stubEnv('PIN_PEPPER', pepper);
   const { default: handler } = await import('../src/vercel.js');
-  api = createServer((req, res) => handler(req as Request, res as Response));
+  api = createServer((req, res) => {
+    // Vercel adds this configurable helper even when no cookies were sent.
+    if (req.headers['x-test-vercel-cookies'] === '1') {
+      Object.defineProperty(req, 'cookies', {
+        configurable: true, enumerable: true,
+        get: () => Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map((part) => {
+          const separator = part.indexOf('=');
+          return [part.slice(0, separator).trim(), decodeURIComponent(part.slice(separator + 1))];
+        })),
+      });
+    }
+    return handler(req as Request, res as Response);
+  });
   base = await listen(api);
   const hash = await bcrypt.hash(credentials.password, 12);
   await call('cloudsent_bootstrap_admin', { p_username: credentials.username, p_hash: hash });
@@ -119,6 +132,43 @@ describe('Vercel API and Supabase integration', () => {
     prayerId = rows.rows[0].prayer_id;
     const wall = await request('/api/prayers'); expect(wall.body.data).toHaveLength(0);
     const detail = await request(`/api/prayers/${prayerId}`); expect(detail.response.status).toBe(404);
+  });
+  it('submits through Vercel cookie helpers, reuses verified cookies and rejects tampering', async () => {
+    const input = { message: 'Vercel cookie regression prayer', categoryId, moodId, color: 'sky', isAnonymous: true };
+    const key = crypto.randomUUID();
+    const headers = { 'X-Test-Vercel-Cookies': '1', 'Idempotency-Key': key };
+    const first = await request('/api/index?__cloudsent_path=prayers', 'POST', input, false, headers);
+    expect(first.response.status).toBe(201);
+    const setCookie = first.response.headers.get('set-cookie')!;
+    expect(setCookie).toContain('HttpOnly'); expect(setCookie).toContain('SameSite=Lax');
+    const deviceCookie = setCookie.split(';')[0];
+    const signedValue = decodeURIComponent(deviceCookie.slice(deviceCookie.indexOf('=') + 1));
+    expect(cookieParser.signedCookie(signedValue, pepper)).toMatch(/^[0-9a-f-]{36}$/);
+    const repeat = await request('/api/prayers', 'POST', input, false, { ...headers, Cookie: deviceCookie });
+    expect(repeat.response.status).toBe(201); expect(repeat.response.headers.get('set-cookie')).toBeNull();
+    for (const badCookie of [deviceCookie + 'tampered', 'cloudsent_device=unverified-device-value-without-a-signature']) {
+      const retry = await request('/api/prayers', 'POST', input, false, { ...headers, Cookie: badCookie });
+      expect(retry.response.status).toBe(201);
+      expect(retry.response.headers.get('set-cookie')).toContain('cloudsent_device=s%3A');
+      expect(retry.response.headers.get('set-cookie')!.split(';')[0]).not.toBe(deviceCookie);
+    }
+    const rows = await db.query<any>('SELECT * FROM prayers WHERE submission_key = $1', [key]);
+    expect(rows.rows).toHaveLength(1); expect(rows.rows[0]).toMatchObject({ status: 'pending', display_name: null });
+    expect((await request(`/api/prayers/${rows.rows[0].prayer_id}`)).response.status).toBe(404);
+  });
+  it('logs in and verifies admin sessions with Vercel-provided cookies', async () => {
+    const helpers = { 'X-Test-Vercel-Cookies': '1', 'X-Forwarded-For': '192.0.2.30' };
+    const login = await request('/api/index?__cloudsent_path=admin/session', 'POST', credentials, false, helpers);
+    expect(login.response.status).toBe(200);
+    const sessionCookie = login.response.headers.get('set-cookie')!.split(';')[0];
+    expect(login.response.headers.get('set-cookie')).toContain('HttpOnly');
+    const session = await request('/api/admin/session', 'GET', undefined, false, { ...helpers, Cookie: sessionCookie });
+    expect(session.response.status).toBe(200); expect(session.body.data.csrfToken).toBe(login.body.data.csrfToken);
+    const denied = await request('/api/admin/session', 'DELETE', undefined, false, { ...helpers, Cookie: sessionCookie });
+    expect(denied.response.status).toBe(403);
+    const logout = await request('/api/admin/session', 'DELETE', undefined, false, { ...helpers, Cookie: sessionCookie, 'X-CSRF-Token': login.body.data.csrfToken });
+    expect(logout.response.status).toBe(200);
+    expect((await request('/api/admin/session', 'GET', undefined, false, helpers)).response.status).toBe(401);
   });
   it('protects admin routes, uses a username/password cookie session and requires the CSRF token', async () => {
     expect((await request('/api/admin/stats')).response.status).toBe(401);
