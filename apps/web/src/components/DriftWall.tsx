@@ -34,6 +34,7 @@ interface DriftWallProps {
   overlayColor?: string;
   className?: string;
   style?: CSSProperties;
+  interactive?: boolean;
 }
 
 const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -43,7 +44,7 @@ export default function DriftWall({
   items = [], columns = 5, tileWidth = 220, tileHeight = 178, gap = 18, radius = 2, tilt = 10, turn = -8,
   roll = 0, perspective = 1200, depth = 100, speed = 24, direction = 'up', variance = 0.35,
   parallax = 0.45, pauseOnHover = false, lift = 34, fade = 0.35, dim = 0.92, grayscale = false,
-  overlayColor = '#6f83a0', className = '', style,
+  overlayColor = '#6f83a0', className = '', style, interactive = true,
 }: DriftWallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const planeRef = useRef<HTMLDivElement>(null);
@@ -180,17 +181,17 @@ export default function DriftWall({
       <span className="drift-wall__overlay" aria-hidden="true" />
       <span className="drift-wall__copy"><strong>{item.title || 'Untitled prayer'}</strong><span>{message}</span><small>{item.meta || 'Anonymous'}</small></span>
     </span>;
-    const common = { className: `drift-wall__tile${activeId === id ? ' is-active' : ''}`, 'data-tile-id': id, 'data-col': column, onFocus: () => activate(id, column), onBlur: release };
+    const common = { className: `drift-wall__tile${activeId === id ? ' is-active' : ''}`, 'data-tile-id': id, 'data-col': column, onFocus: interactive ? () => activate(id, column) : undefined, onBlur: interactive ? release : undefined };
     if (clone) return <div key={id} {...common} aria-hidden="true">{content}</div>;
-    if (item.href) {
+    if (item.href && interactive) {
       const external = /^https?:\/\//i.test(item.href);
       return <a key={id} href={item.href} {...common} {...(external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}>{content}</a>;
     }
-    return <div key={id} tabIndex={0} role="group" aria-label={item.title || 'Prayer'} {...common}>{content}</div>;
+    return <div key={id} tabIndex={interactive ? 0 : undefined} role="group" aria-label={item.title || 'Prayer'} {...common}>{content}</div>;
   };
 
   const rootClass = ['drift-wall', reduced ? 'drift-wall--reduced' : '', className].filter(Boolean).join(' ');
-  return <div ref={containerRef} className={rootClass} style={cssVars} onPointerMove={handlePointerMove} onPointerEnter={() => { wallHoveredRef.current = true; }} onPointerLeave={() => { wallHoveredRef.current = false; pointerRef.current = { x: 0, y: 0 }; release(); }} role="group" aria-label="Drifting prayer wall">
+  return <div ref={containerRef} className={rootClass} style={cssVars} onPointerMove={interactive ? handlePointerMove : undefined} onPointerEnter={interactive ? () => { wallHoveredRef.current = true; } : undefined} onPointerLeave={interactive ? () => { wallHoveredRef.current = false; pointerRef.current = { x: 0, y: 0 }; release(); } : undefined} role="group" aria-label="Drifting prayer wall">
     <div ref={planeRef} className="drift-wall__plane">
       {columnItems.map((column, columnIndex) => <div className="drift-wall__col" key={`column-${columnIndex}`}><div className="drift-wall__track" ref={(element) => { trackRefs.current[columnIndex] = element; }}>{Array.from({ length: columnMeta[columnIndex].copies }).flatMap((_, copyIndex) => column.map((item, itemIndex) => renderTile(item, `${columnIndex}-${copyIndex}-${itemIndex}`, columnIndex, copyIndex > 0)))}</div></div>)}
     </div>

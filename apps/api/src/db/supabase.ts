@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from '../config.js';
 
-// Server only. CloudSent manages its own PIN sessions, not Supabase user sessions.
+// Server only. CloudSent manages its own admin login sessions, not Supabase user sessions.
 export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SECRET_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(15_000) }) },

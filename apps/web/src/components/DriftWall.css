@@ -5,7 +5,7 @@
   overflow: hidden;
   perspective: var(--dw-perspective, 1200px);
   perspective-origin: 50% 50%;
-  background: linear-gradient(145deg, rgba(231, 244, 255, 0.92), rgba(249, 246, 255, 0.96) 52%, rgba(255, 249, 229, 0.92));
+  background: linear-gradient(145deg, rgba(231, 244, 255, 0.92), rgba(241, 247, 255, 0.96) 52%, rgba(210, 231, 255, 0.92));
   border: 1px solid rgba(131, 165, 195, 0.34);
   -webkit-mask-image: radial-gradient(ellipse 80% 88% at 50% 48%, #000 var(--dw-edge), transparent 100%);
   mask-image: radial-gradient(ellipse 80% 88% at 50% 48%, #000 var(--dw-edge), transparent 100%);

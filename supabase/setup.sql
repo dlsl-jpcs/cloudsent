@@ -1,4 +1,4 @@
--- Run the entire file in the Supabase SQL Editor. Safe to rerun: existing rows and PIN hashes remain.
+-- Run the entire file in the Supabase SQL Editor. Safe to rerun: prayers and configured password accounts remain.
 -- The website uses CloudSent's Vercel API; only its server secret key can access these tables/functions.
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS extensions;
@@ -31,7 +31,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS moods_name_lower_uq ON moods (lower(name));
 CREATE TABLE IF NOT EXISTS admins (
   admin_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username VARCHAR(50) NOT NULL DEFAULT 'administrator',
-  pin_hash VARCHAR(255) NOT NULL,
+  pin_hash VARCHAR(255), -- Retired; never used for authentication.
+  password_hash VARCHAR(255), -- Empty until admin:bootstrap provisions password login.
   session_version INTEGER NOT NULL DEFAULT 1,
   failed_attempts INTEGER NOT NULL DEFAULT 0,
   next_attempt_at TIMESTAMPTZ,
@@ -114,6 +115,20 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Password login upgrade: preserve IDs, prayer revisions and the retired PIN hash.
+-- Re-running this block does not sign out newly configured password accounts.
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS username VARCHAR(50) NOT NULL DEFAULT 'administrator';
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE admins ALTER COLUMN pin_hash DROP NOT NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '004_admin_password_login') THEN
+    UPDATE admins SET session_version = session_version + 1, failed_attempts = 0, next_attempt_at = NULL;
+    INSERT INTO schema_migrations(version) VALUES ('004_admin_password_login');
+  END IF;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION touch_updated_at() RETURNS TRIGGER AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
@@ -147,7 +162,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION cloudsent_health() RETURNS JSONB
 LANGUAGE sql STABLE SET search_path = public, extensions AS $$
-  SELECT jsonb_build_object('status', 'ok', 'schemaVersion', 3);
+  SELECT jsonb_build_object('status', 'ok', 'schemaVersion', 4);
 $$;
 
 -- Domain functions keep related writes atomic over Supabase's HTTPS connection.
@@ -350,7 +365,7 @@ RETURNS JSONB LANGUAGE plpgsql SET search_path = public, extensions AS $$
 DECLARE current admins%ROWTYPE; failures INTEGER;
 BEGIN
   SELECT * INTO current FROM admins WHERE admin_id = p_admin_id FOR UPDATE;
-  IF NOT FOUND OR current.session_version <> p_session_version OR current.next_attempt_at > now() THEN RETURN jsonb_build_object('ok', false); END IF;
+  IF NOT FOUND OR current.password_hash IS NULL OR current.session_version <> p_session_version OR current.next_attempt_at > now() THEN RETURN jsonb_build_object('ok', false); END IF;
   IF p_success THEN
     UPDATE admins SET failed_attempts = 0, next_attempt_at = NULL WHERE admin_id = p_admin_id;
     RETURN jsonb_build_object('ok', true, 'adminId', p_admin_id, 'sessionVersion', current.session_version);
@@ -361,20 +376,21 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION cloudsent_change_pin(p_id UUID, p_hash TEXT, p_session_version INTEGER) RETURNS JSONB
+-- Retire the PIN entry points. Browser roles cannot execute the new provisioning function.
+DROP FUNCTION IF EXISTS cloudsent_change_pin(UUID, TEXT, INTEGER);
+DROP FUNCTION IF EXISTS cloudsent_bootstrap_admin(TEXT);
+CREATE OR REPLACE FUNCTION cloudsent_bootstrap_admin(p_username TEXT, p_hash TEXT) RETURNS VOID
 LANGUAGE plpgsql SET search_path = public, extensions AS $$
 BEGIN
-  UPDATE admins SET pin_hash = p_hash, session_version = session_version + 1, failed_attempts = 0, next_attempt_at = NULL WHERE admin_id = p_id AND session_version = p_session_version;
-  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'status', 409, 'code', 'CONFLICT', 'message', 'The administrator session changed. Sign in again.'); END IF;
-  RETURN jsonb_build_object('ok', true);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION cloudsent_bootstrap_admin(p_hash TEXT) RETURNS VOID
-LANGUAGE plpgsql SET search_path = public, extensions AS $$
-BEGIN
+  IF p_username IS NULL OR lower(trim(p_username)) !~ '^[a-z0-9._-]{3,50}$' THEN
+    RAISE EXCEPTION 'A valid administrator username is required';
+  END IF;
+  IF p_hash IS NULL OR p_hash !~ '^\$2[aby]\$(1[2-9]|2[0-9]|3[01])\$[./A-Za-z0-9]{53}$' THEN
+    RAISE EXCEPTION 'A bcrypt password hash with cost 12 or higher is required';
+  END IF;
   PERFORM pg_advisory_xact_lock(hashtext('cloudsent:bootstrap-admin'));
-  INSERT INTO admins(pin_hash) VALUES (p_hash) ON CONFLICT ((true)) DO UPDATE SET pin_hash = EXCLUDED.pin_hash,
+  INSERT INTO admins(username, password_hash) VALUES (lower(trim(p_username)), p_hash)
+  ON CONFLICT ((true)) DO UPDATE SET username = EXCLUDED.username, password_hash = EXCLUDED.password_hash,
     session_version = admins.session_version + 1, failed_attempts = 0, next_attempt_at = NULL;
 END;
 $$;

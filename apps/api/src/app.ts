@@ -19,7 +19,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
     res.status(status).json({ error: { code: 'INVALID_REQUEST', message: status === 413 ? 'That request is too large.' : 'That request is not valid JSON.' } });
     return;
   }
-  // Never log connection values, cookies or request bodies containing PINs.
+  // Never log connection values, cookies or request bodies containing credentials.
   console.error('CloudSent API request failed', { code: (err as { code?: string })?.code || 'INTERNAL_ERROR' });
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'CloudSent is temporarily unavailable.' } });
 });

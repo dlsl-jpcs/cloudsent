@@ -3,14 +3,14 @@ import type { Response } from 'express';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
-  adminLoginSchema, adminPrayerPatchSchema, changePinSchema, createPrayerSchema,
+  adminLoginSchema, adminPrayerPatchSchema, createPrayerSchema,
   prayerQuerySchema, reportSchema, resolveReportSchema, statusSchema,
 } from '@cloudsent/contracts';
 import { supabase, checkError, rpc, type MutationResult } from './db/supabase.js';
 import { config } from './config.js';
 import { blockedWord, contentHash } from './moderation.js';
 import { deviceId, ensureDevice, prayerIpVolume, prayerRateLimit, rateLimit, reportRateLimit } from './rateLimit.js';
-import { clearAdminSession, issueAdminSession, requireAdmin, requireCsrf, verifyPin } from './auth.js';
+import { clearAdminSession, issueAdminSession, requireAdmin, requireCsrf, verifyPassword } from './auth.js';
 
 export const router = Router();
 const adminRouter = Router();
@@ -73,7 +73,7 @@ async function taxonomy(activeOnly: boolean) {
 router.get('/health', async (_req, res) => {
   try {
     const health = await rpc<{ status: string; schemaVersion: number }>('cloudsent_health');
-    if (health.schemaVersion !== 3) throw new Error('Database setup is outdated');
+    if (health.schemaVersion !== 4) throw new Error('Database setup is outdated');
     res.json({ data: health });
   } catch { error(res, 503, 'DB_UNAVAILABLE', 'CloudSent is temporarily unavailable.'); }
 });
@@ -129,21 +129,12 @@ adminRouter.param('id', (_req, res, next, value) => {
 });
 adminRouter.post('/session', loginRateLimit, async (req, res) => {
   const input = parseBody(adminLoginSchema, req.body, res); if (!input) return;
-  const result = await verifyPin(input.pin);
-  if (!result.ok || !result.adminId || result.sessionVersion === undefined) { error(res, 401, 'INVALID_LOGIN', 'The PIN is not valid.'); return; }
+  const result = await verifyPassword(input.username, input.password);
+  if (!result.ok || !result.adminId || result.sessionVersion === undefined) { error(res, 401, 'INVALID_LOGIN', 'The username or password is incorrect.'); return; }
   res.json({ data: { csrfToken: issueAdminSession(res, result.adminId, result.sessionVersion) } });
 });
 adminRouter.get('/session', requireAdmin, async (req, res) => res.json({ data: { csrfToken: req.admin!.csrf } }));
 adminRouter.delete('/session', requireAdmin, requireCsrf, async (_req, res) => { clearAdminSession(res); res.json({ data: { message: 'Signed out.' } }); });
-adminRouter.patch('/session/pin', requireAdmin, requireCsrf, async (req, res) => {
-  const input = parseBody(changePinSchema, req.body, res); if (!input) return;
-  const current = await verifyPin(input.currentPin);
-  if (!current.ok || current.adminId !== req.admin!.id) { error(res, 401, 'INVALID_PIN', 'The current PIN is not valid.'); return; }
-  const hash = await (await import('bcryptjs')).default.hash(`${input.newPin}${config.PIN_PEPPER}`, 12);
-  const result = await rpc<MutationResult>('cloudsent_change_pin', { p_id: req.admin!.id, p_hash: hash, p_session_version: current.sessionVersion });
-  if (result.ok) clearAdminSession(res);
-  mutationResponse(res, result, 'PIN changed. Sign in again.');
-});
 adminRouter.get('/prayers', requireAdmin, async (req, res) => {
   const parsed = z.object({ status: z.enum(['pending', 'approved', 'rejected']).optional(), q: z.string().trim().max(100).optional() }).safeParse(req.query);
   if (!parsed.success) { error(res, 400, 'INVALID_QUERY', 'One or more admin filters are invalid.'); return; }

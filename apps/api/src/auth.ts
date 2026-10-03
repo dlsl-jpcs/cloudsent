@@ -22,15 +22,15 @@ export function clearAdminSession(res: Response) { res.clearCookie(COOKIE, { htt
 function claims(req: Request): AdminClaims | null {
   const token = req.cookies?.[COOKIE];
   if (!token) return null;
-  try { return jwt.verify(token, config.JWT_SECRET) as AdminClaims; } catch { return null; }
+  try { return jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] }) as AdminClaims; } catch { return null; }
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const tokenClaims = claims(req);
   if (!tokenClaims?.sub || !/^[0-9a-f-]{36}$/i.test(tokenClaims.sub) || typeof tokenClaims.csrf !== 'string') { res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }); return; }
-  const { data: admin, error } = await supabase.from('admins').select('admin_id, session_version').eq('admin_id', tokenClaims.sub).maybeSingle();
+  const { data: admin, error } = await supabase.from('admins').select('admin_id, password_hash, session_version').eq('admin_id', tokenClaims.sub).maybeSingle();
   checkError(error);
-  if (!admin || Number(admin.session_version) !== Number(tokenClaims.sessionVersion)) { res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }); return; }
+  if (!admin?.password_hash || Number(admin.session_version) !== Number(tokenClaims.sessionVersion)) { res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }); return; }
   req.admin = { id: tokenClaims.sub, csrf: tokenClaims.csrf };
   next();
 }
@@ -40,12 +40,18 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export async function verifyPin(pin: string): Promise<{ ok: boolean; adminId?: string; sessionVersion?: number }> {
-  const { data: admin, error } = await supabase.from('admins').select('admin_id, pin_hash, session_version, next_attempt_at').limit(1).maybeSingle();
+// Unknown users still perform password hashing work instead of exposing a fast account lookup.
+let dummyHash: Promise<string> | undefined;
+export async function verifyPassword(username: string, password: string): Promise<{ ok: boolean; adminId?: string; sessionVersion?: number }> {
+  const { data: admin, error } = await supabase.from('admins').select('admin_id, password_hash, session_version, next_attempt_at').eq('username', username).maybeSingle();
   checkError(error);
-  if (!admin) return { ok: false };
-  if (admin.next_attempt_at && new Date(admin.next_attempt_at).getTime() > Date.now()) return { ok: false };
-  const ok = await bcrypt.compare(`${pin}${config.PIN_PEPPER}`, admin.pin_hash);
+  const locked = admin?.next_attempt_at && new Date(admin.next_attempt_at).getTime() > Date.now();
+  if (!admin?.password_hash || locked) {
+    dummyHash ??= bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+    await bcrypt.compare(password, await dummyHash);
+    return { ok: false };
+  }
+  const ok = await bcrypt.compare(password, admin.password_hash);
   return rpc('cloudsent_login_result', { p_admin_id: admin.admin_id, p_success: ok, p_session_version: admin.session_version });
 }
 

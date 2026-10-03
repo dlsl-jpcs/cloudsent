@@ -1,0 +1,24 @@
+/* React Bits Glide Select, adapted to CloudSent. See THIRD_PARTY_NOTICES.md. */
+.glide-select { min-width: 0; width: 100%; }
+.glide-select__trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 11px 14px; border: 1px solid #cbd9e6; border-radius: 8px; background: #fff; color: #233042; font: inherit; font-size: .95rem; font-weight: 400; text-align: left; cursor: pointer; touch-action: manipulation; transition: border-color .16s ease, background .16s ease; }
+.glide-select__trigger:hover, .glide-select__trigger[aria-expanded="true"] { border-color: #9bb7d1; background: #f8fbff; }
+.glide-select__trigger:disabled { opacity: .55; cursor: not-allowed; }
+.glide-select__label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.glide-select__chevron { width: 17px; height: 17px; flex-shrink: 0; color: #617b95; transition: transform .22s ease; }
+.glide-select__trigger[aria-expanded="true"] .glide-select__chevron { transform: rotate(180deg); }
+.glide-select__menu { position: fixed; z-index: 1000; overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid #cbdce9; border-radius: 12px; background: #fff; color: #233042; box-shadow: 0 10px 28px rgba(51, 83, 113, .14); transform-origin: top center; animation: glide-select-pop .18s cubic-bezier(.23, 1, .32, 1); }
+.glide-select__menu[data-side="top"] { transform-origin: bottom center; }
+.glide-select__list { position: relative; }
+.glide-select__pill { position: absolute; top: 0; left: 0; right: 0; height: 44px; border-radius: 7px; background: #eaf4fd; pointer-events: none; transition: transform .22s cubic-bezier(.23, 1, .32, 1), opacity .15s ease; }
+.glide-select__option { position: relative; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border-radius: 7px; font-size: .95rem; font-weight: 400; cursor: pointer; user-select: none; touch-action: pan-y; }
+.glide-select__option[aria-selected="true"] { color: #365572; font-weight: 600; }
+.glide-select__option[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.glide-select__swatch { width: 16px; height: 16px; flex-shrink: 0; border: 1px solid rgba(54, 81, 109, .2); border-radius: 50%; }
+.glide-select__check { width: 17px; height: 17px; flex-shrink: 0; color: #92702b; }
+.admin-filters .glide-select, .hero-actions > .glide-select { width: auto; min-width: 170px; }
+@keyframes glide-select-pop { from { opacity: 0; transform: scale(.97) translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .glide-select__menu { animation: none; }
+  .glide-select__pill, .glide-select__chevron, .glide-select__trigger { transition: none; }
+}
+@media (max-width: 760px) { .admin-filters .glide-select { width: 100%; } }

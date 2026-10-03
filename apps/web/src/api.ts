@@ -20,7 +20,7 @@ export async function submitPrayer(input: unknown) { return request<ApiEnvelope<
 export async function reportPrayer(id: string, reason: string) { return request<ApiEnvelope<{ message: string }>>(`/prayers/${id}/reports`, { method: 'POST', body: JSON.stringify({ reason }) }); }
 
 export async function adminSession() { const result = await request<ApiEnvelope<{ csrfToken: string }>>('/admin/session'); csrfToken = result.data.csrfToken; return result; }
-export async function adminLogin(pin: string) { const result = await request<ApiEnvelope<{ csrfToken: string }>>('/admin/session', { method: 'POST', body: JSON.stringify({ pin }) }); csrfToken = result.data.csrfToken; return result; }
+export async function adminLogin(username: string, password: string) { const result = await request<ApiEnvelope<{ csrfToken: string }>>('/admin/session', { method: 'POST', body: JSON.stringify({ username, password }) }); csrfToken = result.data.csrfToken; return result; }
 export async function adminLogout() { const result = await request('/admin/session', { method: 'DELETE' }); csrfToken = ''; return result; }
 export async function adminPrayers(search = '') { return request<ApiEnvelope<any[]>>('/admin/prayers' + search); }
 export async function adminReports() { return request<ApiEnvelope<any[]>>('/admin/reports'); }

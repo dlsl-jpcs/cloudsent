@@ -20,6 +20,7 @@ let adminId: string;
 let prayerId: string;
 let setup: string;
 const pepper = 'test-only-pepper-never-production';
+const credentials = { username: 'test.keeper', password: 'test-only-cloudsent-passphrase' };
 const secretKey = 'sb_secret_test_only';
 
 async function listen(server: Server) {
@@ -62,7 +63,8 @@ beforeAll(async () => {
         data = await call(name, JSON.parse(body || '{}'));
       } else if (url.pathname === '/rest/v1/admins') {
         const id = url.searchParams.get('admin_id')?.replace(/^eq\./, '');
-        const rows = await db.query('SELECT * FROM admins WHERE ($1::uuid IS NULL OR admin_id = $1) LIMIT 1', [id || null]);
+        const username = url.searchParams.get('username')?.replace(/^eq\./, '');
+        const rows = await db.query('SELECT * FROM admins WHERE ($1::uuid IS NULL OR admin_id = $1) AND ($2::text IS NULL OR username = $2) LIMIT 1', [id || null, username || null]);
         data = req.headers.accept?.includes('object+json') ? rows.rows[0] ?? null : rows.rows;
       } else if (['/rest/v1/categories', '/rest/v1/moods'].includes(url.pathname)) {
         const table = url.pathname.split('/').at(-1)!;
@@ -82,8 +84,8 @@ beforeAll(async () => {
   const { default: handler } = await import('../src/vercel.js');
   api = createServer((req, res) => handler(req as Request, res as Response));
   base = await listen(api);
-  const hash = await bcrypt.hash(`12345678${pepper}`, 4);
-  await call('cloudsent_bootstrap_admin', { p_hash: hash });
+  const hash = await bcrypt.hash(credentials.password, 12);
+  await call('cloudsent_bootstrap_admin', { p_username: credentials.username, p_hash: hash });
   adminId = (await db.query<{ admin_id: string }>('SELECT admin_id FROM admins')).rows[0].admin_id;
   categoryId = (await db.query<{ category_id: string }>('SELECT category_id FROM categories ORDER BY position LIMIT 1')).rows[0].category_id;
   moodId = (await db.query<{ mood_id: string }>('SELECT mood_id FROM moods ORDER BY position LIMIT 1')).rows[0].mood_id;
@@ -98,7 +100,7 @@ afterAll(async () => {
 describe('Vercel API and Supabase integration', () => {
   it('routes rewritten API paths and rejects unknown API URLs as JSON', async () => {
     const health = await request('/api/index?__cloudsent_path=health');
-    expect(health.response.status).toBe(200); expect(health.body.data.schemaVersion).toBe(3);
+    expect(health.response.status).toBe(200); expect(health.body.data.schemaVersion).toBe(4);
     const unknown = await request('/api/index?__cloudsent_path=missing');
     expect(unknown.response.status).toBe(404); expect(unknown.body.error.code).toBe('NOT_FOUND');
     const choices = await request('/api/taxonomy');
@@ -118,9 +120,9 @@ describe('Vercel API and Supabase integration', () => {
     const wall = await request('/api/prayers'); expect(wall.body.data).toHaveLength(0);
     const detail = await request(`/api/prayers/${prayerId}`); expect(detail.response.status).toBe(404);
   });
-  it('protects admin routes, uses a PIN cookie session and requires the CSRF token', async () => {
+  it('protects admin routes, uses a username/password cookie session and requires the CSRF token', async () => {
     expect((await request('/api/admin/stats')).response.status).toBe(401);
-    const login = await request('/api/admin/session', 'POST', { pin: '12345678' });
+    const login = await request('/api/admin/session', 'POST', credentials);
     expect(login.response.status).toBe(200);
     cookie = login.response.headers.get('set-cookie')!.split(';')[0]; csrf = login.body.data.csrfToken;
     expect(login.response.headers.get('set-cookie')).toContain('HttpOnly');
@@ -195,12 +197,12 @@ describe('Vercel API and Supabase integration', () => {
     expect(await call('cloudsent_seed_demo', { p_prayers: seed })).toBe(1);
     expect(await call('cloudsent_seed_demo', { p_prayers: seed })).toBe(0);
   });
-  it('reruns setup without changing data, PIN or original anonymity', async () => {
+  it('reruns setup without changing data, passwords, sessions or original anonymity', async () => {
     await db.query("INSERT INTO prayers(message, category_id, mood_id, color, is_anonymous, originally_anonymous) VALUES ('Originally named',$1,$2,'sky',true,false)", [categoryId, moodId]);
-    const before = (await db.query<any>('SELECT pin_hash FROM admins')).rows[0].pin_hash;
+    const before = (await db.query<any>('SELECT password_hash, session_version FROM admins')).rows[0];
     // Earlier manual SQL could have revoked the server role's table privileges.
     await db.exec('RESET ROLE; REVOKE ALL ON public.admins FROM service_role;'); await db.exec(setup); await db.exec('SET ROLE service_role;');
-    expect((await db.query<any>('SELECT pin_hash FROM admins')).rows[0].pin_hash).toBe(before);
+    expect((await db.query<any>('SELECT password_hash, session_version FROM admins')).rows[0]).toEqual(before);
     expect((await db.query<any>("SELECT originally_anonymous FROM prayers WHERE message = 'Originally named'")).rows[0].originally_anonymous).toBe(false);
   });
   it('denies browser roles access to sensitive tables and every CloudSent function', async () => {
@@ -224,13 +226,32 @@ describe('Vercel API and Supabase integration', () => {
     const denied = await request('/api/prayers', 'POST', input, false, { Cookie: deviceCookie });
     expect(denied.response.status).toBe(429); expect(Number(denied.response.headers.get('retry-after'))).toBeGreaterThan(0);
   });
-  it('changes the PIN, invalidates the old session and preserves database lockout', async () => {
-    const changed = await request('/api/admin/session/pin', 'PATCH', { currentPin: '12345678', newPin: '87654321' }, true);
-    expect(changed.response.status).toBe(200);
+  it('rejects PIN requests, resets credentials, invalidates sessions and preserves lockout', async () => {
+    expect((await request('/api/admin/session/pin', 'PATCH', { currentPin: '12345678', newPin: '87654321' }, true)).response.status).toBe(404);
+    expect((await request('/api/admin/session', 'POST', { pin: '12345678' }, false, { 'X-Forwarded-For': '192.0.2.11' })).response.status).toBe(422);
+    const hash = await bcrypt.hash('replacement-test-only-passphrase', 12);
+    await call('cloudsent_bootstrap_admin', { p_username: credentials.username, p_hash: hash });
     expect((await request('/api/admin/stats', 'GET', undefined, true)).response.status).toBe(401);
-    const login = await request('/api/admin/session', 'POST', { pin: '87654321' }); expect(login.response.status).toBe(200);
-    const denied = await request('/api/admin/session', 'POST', { pin: '00000000' }); expect(denied.response.status).toBe(401);
+    const login = await request('/api/admin/session', 'POST', { username: ' TEST.KEEPER ', password: 'replacement-test-only-passphrase' });
+    expect(login.response.status).toBe(200);
+    const unknown = await request('/api/admin/session', 'POST', { username: 'not-a-user', password: 'replacement-test-only-passphrase' });
+    expect(unknown.response.status).toBe(401);
+    expect((await db.query<any>('SELECT failed_attempts FROM admins')).rows[0].failed_attempts).toBe(0);
+    const denied = await request('/api/admin/session', 'POST', credentials);
+    expect(denied.response.status).toBe(401); expect(denied.body.error.message).toBe(unknown.body.error.message);
     const admin = (await db.query<any>('SELECT * FROM admins')).rows[0];
     expect(admin.failed_attempts).toBe(1); expect(admin.next_attempt_at).toBeTruthy();
+    const locked = await request('/api/admin/session', 'POST', { username: credentials.username, password: 'replacement-test-only-passphrase' });
+    expect(locked.response.status).toBe(401);
+    const stale = await call('cloudsent_login_result', { p_admin_id: adminId, p_success: true, p_session_version: admin.session_version - 1 });
+    expect(stale.ok).toBe(false);
+  });
+  it('throttles repeated login attempts across requests', async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const denied = await request('/api/admin/session', 'POST', { username: 'unknown.user', password: 'incorrect-test-password' }, false, { 'X-Forwarded-For': '192.0.2.20' });
+      expect(denied.response.status).toBe(401);
+    }
+    const limited = await request('/api/admin/session', 'POST', credentials, false, { 'X-Forwarded-For': '192.0.2.20' });
+    expect(limited.response.status).toBe(429); expect(Number(limited.response.headers.get('retry-after'))).toBeGreaterThan(0);
   });
 });

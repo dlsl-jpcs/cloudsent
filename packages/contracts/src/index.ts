@@ -48,9 +48,16 @@ export type PrayerQuery = z.infer<typeof prayerQuerySchema>;
 export const reportSchema = z.object({ reason: trimmedString(255) });
 export type ReportInput = z.infer<typeof reportSchema>;
 
-export const adminPinSchema = z.string().regex(/^\d{8,12}$/, 'PIN must contain 8–12 digits');
-export const adminLoginSchema = z.object({ pin: adminPinSchema });
-export const changePinSchema = z.object({ currentPin: adminPinSchema, newPin: adminPinSchema });
+export const adminUsernameSchema = z.string().trim().toLowerCase().min(3).max(50)
+  .regex(/^[a-z0-9._-]+$/, 'Use letters, numbers, dots, underscores or hyphens for the username.');
+// bcrypt has a 72-byte limit, including multi-byte characters. Never silently truncate a password.
+export const adminPasswordSchema = z.string().min(1, 'Enter your password.').max(72)
+  .refine((value) => new TextEncoder().encode(value).length <= 72, 'The password must be at most 72 UTF-8 bytes.');
+export const adminLoginSchema = z.object({ username: adminUsernameSchema, password: adminPasswordSchema }).strict();
+export const adminCredentialsSchema = z.object({
+  username: adminUsernameSchema,
+  password: adminPasswordSchema.refine((value) => value.length >= 15 && Boolean(value.trim()), 'Choose a password or passphrase with at least 15 characters.'),
+}).strict();
 
 export const adminPrayerPatchSchema = z.object({
   expectedVersion: z.number().int().positive(),
