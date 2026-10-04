@@ -11,6 +11,7 @@ import {
 import PillNav from "./components/PillNav";
 import SpotlightCard from "./components/SpotlightCard";
 import Stepper from "./components/Stepper";
+import CopyrightNotice from "./components/CopyrightNotice";
 import { palette } from "./palette";
 
 const initialForm = {
@@ -76,6 +77,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <span className="footer-note">
           Held with care. Shared with kindness.
         </span>
+        <CopyrightNotice />
       </footer>
     </div>
   );

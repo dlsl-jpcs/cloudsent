@@ -1,3 +1,15 @@
+.display-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 512px;
+  background: #dceafb;
+}
+.display-footer {
+  flex-shrink: 0;
+  padding: 0 16px 12px;
+}
 .display-page {
   --display-ink: #203b62;
   --display-sky: #d5e9ff;
@@ -6,9 +18,9 @@
   grid-template-columns: minmax(0, 1fr) clamp(320px, 27vw, 480px);
   gap: 16px;
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 480px;
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
   padding: clamp(12px, 1.2vw, 24px);
   background: #dceafb;
 }
@@ -313,9 +325,12 @@
   }
 }
 @media (max-width: 760px) {
-  .display-page {
+  .display-shell {
     height: auto;
     min-height: 100dvh;
+  }
+  .display-page {
+    height: auto;
     padding: 12px;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr);

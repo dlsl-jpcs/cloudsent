@@ -84,6 +84,13 @@ const tick = async () => {
 };
 
 describe("school display", () => {
+  it("places the JPCS DLSL copyright below the wall and QR panel", async () => {
+    await render("/view?demo=1");
+    const notice = host.querySelector(".display-footer .copyright-notice")!;
+    expect(notice.textContent).toBe(`© ${new Date().getFullYear()} JPCS DLSL. All rights reserved.`);
+    expect(host.querySelectorAll(".copyright-notice")).toHaveLength(1);
+    expect(host.querySelector(".display-page")?.nextElementSibling).toBe(notice.parentElement);
+  });
   it("matches the regular wall's smaller cards and fills the available width responsively", async () => {
     await render("/view?demo=1");
     const wall = host.querySelector<HTMLElement>(".drift-wall")!;
@@ -208,7 +215,7 @@ describe("school display", () => {
     expect(api.adminPrayers).not.toHaveBeenCalled();
     expect(api.getTaxonomy).not.toHaveBeenCalled();
     expect(
-      host.querySelector("header, footer, nav, input, select, button"),
+      host.querySelector("header, .site-footer, nav, input, select, button"),
     ).toBeNull();
     expect(host.querySelector(".drift-wall")).not.toBeNull();
     expect(host.textContent).toContain(prayer.message);

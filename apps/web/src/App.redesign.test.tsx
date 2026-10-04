@@ -112,6 +112,19 @@ const review = async () => {
 };
 
 describe("redesigned public pages", () => {
+  it.each(["/", "/wall", "/submit", "/prayer/prayer", "/secretlang", "/secretlang/dashboard", "/secretlang/tools", "/about", "/privacy", "/acceptable-use", "/missing-page"])(
+    "shows a single JPCS DLSL copyright at the bottom of %s",
+    async (route) => {
+      vi.mocked(api.listPrayers).mockResolvedValue({ data: [], meta: { hasMore: false, nextCursor: null } });
+      vi.mocked(api.getPrayer).mockResolvedValue({ data: prayer });
+      vi.mocked(api.adminTaxonomy).mockResolvedValue({ data: { categories: [category], moods: [mood] } });
+      await render(route);
+      const footer = host.querySelector(".site-footer")!;
+      expect(footer.querySelector(".copyright-notice")?.textContent).toBe(`© ${new Date().getFullYear()} JPCS DLSL. All rights reserved.`);
+      expect(host.querySelectorAll(".copyright-notice")).toHaveLength(1);
+      expect(footer.lastElementChild?.classList.contains("copyright-notice")).toBe(true);
+    },
+  );
   it("has no administrator links in the public navigation or footer", async () => {
     await render("/");
     expect(host.querySelector('a[href^="/secretlang"]')).toBeNull();
