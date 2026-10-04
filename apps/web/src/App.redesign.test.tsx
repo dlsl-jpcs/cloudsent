@@ -112,6 +112,19 @@ const review = async () => {
 };
 
 describe("redesigned public pages", () => {
+  it("keeps the privacy card unchanged when the cursor moves over it", async () => {
+    await render("/privacy");
+    const card = host.querySelector<HTMLElement>(".card-spotlight")!;
+    const initialStyle = card.getAttribute("style");
+    await act(async () => {
+      card.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 150 }));
+    });
+    expect(card.getAttribute("style")).toBe(initialStyle);
+    expect(card.style.getPropertyValue("--mouse-x")).toBe("");
+    expect(card.style.getPropertyValue("--mouse-y")).toBe("");
+    expect(host.querySelector("h1")?.textContent).toBe("Privacy");
+    expect(host.querySelector('a[href="/wall"]')).not.toBeNull();
+  });
   it.each(["/", "/wall", "/submit", "/prayer/prayer", "/secretlang", "/secretlang/dashboard", "/secretlang/tools", "/about", "/privacy", "/acceptable-use", "/missing-page"])(
     "shows a single JPCS DLSL copyright at the bottom of %s",
     async (route) => {
