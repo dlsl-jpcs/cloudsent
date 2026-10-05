@@ -10,14 +10,15 @@
   width: clamp(190px, 24vw, 340px);
   color: #fff;
   opacity: .6;
-  animation: sky-cloud-drift 110s ease-in-out infinite alternate;
+  /* Constant, gentle movement is visible immediately, without a long ease-in. */
+  animation: sky-cloud-drift 58s linear infinite alternate;
 }
 .sky-cloud-0 { left: -7%; top: 8%; animation-delay: -30s; }
-.sky-cloud-1 { right: -5%; top: 30%; width: 280px; animation-duration: 140s; animation-delay: -70s; }
+.sky-cloud-1 { right: -5%; top: 30%; width: 280px; animation-duration: 72s; animation-delay: -70s; }
 .sky-cloud-2 { left: 32%; top: 56%; opacity: .45; animation-delay: -90s; }
-.sky-cloud-3 { left: -10%; top: 77%; animation-duration: 130s; animation-delay: -45s; }
+.sky-cloud-3 { left: -10%; top: 77%; animation-duration: 66s; animation-delay: -45s; }
 .sky-cloud-4 { right: 16%; top: 2%; width: 220px; opacity: .35; animation-delay: -65s; }
-.sky-cloud-5 { right: -4%; bottom: 4%; animation-duration: 95s; animation-delay: -20s; }
+.sky-cloud-5 { right: -4%; bottom: 4%; animation-duration: 52s; animation-delay: -20s; }
 .sky-sparkle { position: absolute; width: 14px; height: 14px; color: #d5ad58; opacity: .55; animation: sky-twinkle 12s ease-in-out infinite alternate; }
 .sky-sparkle-0 { left: 8%; top: 23%; }
 .sky-sparkle-1 { left: 37%; top: 9%; width: 10px; animation-delay: -3s; }
@@ -27,12 +28,14 @@
 .sky-sparkle-5 { left: 52%; top: 44%; color: #9bbad5; width: 9px; }
 .sky-sparkle-6 { right: 18%; top: 17%; animation-delay: -6s; }
 .sky-sparkle-7 { left: 29%; bottom: 3%; color: #9bbad5; width: 10px; }
-.sky-cloud-bank { position: absolute; bottom: -1px; width: 100%; height: 95px; color: #f6faff; opacity: .9; }
-@keyframes sky-cloud-drift { from { transform: translateX(-45px); } to { transform: translateX(65px); } }
+.sky-cloud-bank { position: absolute; bottom: -1px; left: -60px; width: calc(100% + 120px); height: 95px; color: #f6faff; opacity: .9; animation: sky-bank-drift 68s linear -24s infinite alternate; }
+@keyframes sky-cloud-drift { from { transform: translateX(-90px); } to { transform: translateX(110px); } }
+@keyframes sky-bank-drift { from { transform: translateX(-40px); } to { transform: translateX(40px); } }
 @keyframes sky-twinkle { from { opacity: .3; } to { opacity: .75; } }
 
 .sky-wall { position: relative; isolation: isolate; padding: 34px 24px 55px; background: linear-gradient(180deg, #e7f3ff80, #edf6ff40); border-radius: 28px; }
-.sky-prayer-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 26px; list-style: none; margin: 0; padding: 0; }
+.sky-wall > .sky-backdrop { z-index: 0; }
+.sky-prayer-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 26px; list-style: none; margin: 0; padding: 0; }
 .sky-prayer-grid > li { min-width: 0; }
 .sky-card-float { height: 100%; transform: rotate(var(--card-angle)); animation: sky-card-float var(--float-duration, 11s) ease-in-out var(--float-delay, 0s) infinite alternate; }
 .sky-card-arrival { height: 100%; }
@@ -168,7 +171,7 @@ a.sky-prayer-card:hover { box-shadow: 0 13px 28px #3458791a; color: #2b4059; }
   .home-sky-invitation h2 { font-size: 2rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sky-cloud, .sky-sparkle, .sky-card-float, .sky-card-arrival.is-arriving, .hero-prayer { animation: none; }
+  .sky-cloud, .sky-cloud-bank, .sky-sparkle, .sky-card-float, .sky-card-arrival.is-arriving, .hero-prayer { animation: none; }
   .hero-prayer { transform: rotate(var(--card-angle)); }
   .sky-prayer-card { transition: none; }
 }
