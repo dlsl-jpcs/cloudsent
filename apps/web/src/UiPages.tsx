@@ -12,6 +12,10 @@ import PillNav from "./components/PillNav";
 import SpotlightCard from "./components/SpotlightCard";
 import Stepper from "./components/Stepper";
 import CopyrightNotice from "./components/CopyrightNotice";
+import SkyBackdrop from "./components/SkyBackdrop";
+import SkyPrayerCard from "./components/SkyPrayerCard";
+import CloudIcon from "./components/CloudIcon";
+import { displaySamples } from "./displaySamples";
 import { palette } from "./palette";
 
 const initialForm = {
@@ -44,14 +48,14 @@ export function Shell({ children }: { children: ReactNode }) {
     document.title = `${titles[pathname] || "CloudSent"} · CloudSent()`;
   }, [pathname]);
   return (
-    <div className="site-shell">
+    <div className={`site-shell ${pathname === "/" || pathname === "/wall" ? "site-shell--sky" : ""}`}>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
       <header className="site-header">
         <Link className="brand" to="/" aria-label="CloudSent home">
           <span className="brand-mark" aria-hidden="true">
-            ☁
+            <CloudIcon />
           </span>
           <span>
             CloudSent<span className="brand-parens">()</span>
@@ -84,19 +88,23 @@ export function Shell({ children }: { children: ReactNode }) {
 }
 
 export function Home() {
+  const illustration = (category: string, title: string, message: string, color: PublicPrayer["color"]): PublicPrayer => ({
+    ...(displaySamples.find((prayer) => prayer.category.name === category) || displaySamples[0]),
+    title, message, excerpt: message, color, isAnonymous: true, displayName: null,
+  });
   return (
     <Shell>
       <main className="home-page">
         <section className="home-hero">
+          <SkyBackdrop />
           <div className="home-copy">
             <p className="section-kicker">
-              <span aria-hidden="true">☁</span> A shared sky for quiet
+              <CloudIcon /> A shared sky for quiet
               intentions
             </p>
             <h1>Some prayers are lighter when carried together.</h1>
             <p className="hero-lede">
-              A hope for tomorrow. A thank-you for today. A remembrance that
-              stays with you. There’s a place for it here.
+              A space for hopes, gratitude, prayers, and quiet intentions.
             </p>
             <div className="hero-actions">
               <Link className="button button-primary" to="/submit">
@@ -114,26 +122,9 @@ export function Home() {
             className="letter-scene"
             aria-label="Illustrative prayer cards, not live submissions"
           >
-            <span className="scene-cloud scene-cloud-one" aria-hidden="true">
-              ☁
-            </span>
-            <span className="scene-cloud scene-cloud-two" aria-hidden="true">
-              ☁
-            </span>
-            <div className="scene-letter scene-letter-back" aria-hidden="true">
-              <span>Thanksgiving</span>
-              <p>For the people who make ordinary days feel full.</p>
-            </div>
-            <SpotlightCard className="scene-letter scene-letter-front">
-              <span className="letter-symbol" aria-hidden="true">
-                ✦
-              </span>
-              <p>May there be enough light for the next step.</p>
-              <div>
-                <span>Anonymous</span>
-                <span className="mood-chip">Hopeful</span>
-              </div>
-            </SpotlightCard>
+            <div className="hero-prayer hero-prayer-one"><SkyPrayerCard interactive={false} prayer={illustration("Prayer Intention", "I believe in you!", "May your problems be lifted.", "lavender")} /></div>
+            <div className="hero-prayer hero-prayer-two"><SkyPrayerCard interactive={false} prayer={illustration("Encouragement", "You got this!", "May whoever is reading this succeed in whatever they are going through.", "gold")} /></div>
+            <div className="hero-prayer hero-prayer-three"><SkyPrayerCard interactive={false} prayer={illustration("Thanksgiving", "Thank you for today.", "May tomorrow bring more good things.", "rose")} /></div>
             <span className="scene-caption">
               A glimpse of the wall · sample prayers
             </span>
@@ -177,7 +168,7 @@ export function Home() {
           </SpotlightCard>
           <SpotlightCard className="guidance-card">
             <span className="guidance-symbol" aria-hidden="true">
-              ☁
+              <CloudIcon />
             </span>
             <h3>Join the shared sky</h3>
             <p>
@@ -188,6 +179,15 @@ export function Home() {
               Visit the wall
             </Link>
           </SpotlightCard>
+        </section>
+        <section className="home-sky-invitation">
+          <SkyBackdrop />
+          <div>
+            <h2>Leave a little hope.</h2>
+            <p>Send something kind into the sky.</p>
+            <Link className="button button-primary button-small" to="/submit"><CloudIcon /> Send a prayer</Link>
+          </div>
+          <span className="invitation-sun" aria-hidden="true" />
         </section>
       </main>
     </Shell>
@@ -204,7 +204,7 @@ export function EmptyState({
   return (
     <SpotlightCard className="empty-state">
       <span className="empty-symbol" aria-hidden="true">
-        ☁
+        <CloudIcon />
       </span>
       <h2>
         {unavailable
@@ -853,7 +853,7 @@ export function Info({
         </aside>
         <SpotlightCard className="info-paper">
           <span className="guidance-symbol" aria-hidden="true">
-            ☁
+            <CloudIcon />
           </span>
           <h1>{title}</h1>
           <div className="info-body">{children}</div>
@@ -875,7 +875,7 @@ export function NotFound() {
       <main className="page narrow">
         <SpotlightCard className="empty-state">
           <span className="empty-symbol" aria-hidden="true">
-            ☁
+            <CloudIcon />
           </span>
           <h1>This page drifted away.</h1>
           <p>That address doesn’t lead to a CloudSent page.</p>

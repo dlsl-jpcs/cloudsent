@@ -112,6 +112,31 @@ const review = async () => {
 };
 
 describe("redesigned public pages", () => {
+  it("uses one continuous hero sky and fixed decorative SVG cloud icons", async () => {
+    await render("/");
+    expect(host.querySelectorAll('.home-hero .sky-backdrop')).toHaveLength(1);
+    expect(host.querySelector('.home-hero > .sky-backdrop')).not.toBeNull();
+    expect(host.querySelector('.letter-scene .sky-backdrop')).toBeNull();
+    const brandCloud = host.querySelector('.brand-mark svg.cloud-icon');
+    expect(brandCloud?.getAttribute("viewBox")).toBe("0 0 24 24");
+    expect(brandCloud?.getAttribute("aria-hidden")).toBe("true");
+    expect(brandCloud?.getAttribute("focusable")).toBe("false");
+    const path = brandCloud?.querySelector("path")?.getAttribute("d");
+    expect(host.querySelector('.sky-card-cloud svg path')?.getAttribute("d")).toBe(path);
+    expect(host.textContent).not.toContain("☁");
+  });
+  it("keeps search optional and offers a submission button below the prayer wall", async () => {
+    vi.mocked(api.listPrayers).mockResolvedValue({ data: [prayer], meta: { hasMore: false, nextCursor: null } });
+    await render("/wall");
+    expect(host.querySelector(".sky-prayer-grid")).not.toBeNull();
+    expect(host.querySelector('.wall-bottom-action a')?.getAttribute("href")).toBe("/submit");
+    expect(host.querySelector('.wall-search-toggle')?.getAttribute("aria-expanded")).toBe("false");
+    expect(host.querySelector('#wall-search-panel')?.getAttribute("aria-hidden")).toBe("true");
+    const categoryButton = host.querySelector<HTMLButtonElement>('.sky-category-filters button[aria-pressed="false"]')!;
+    await click(categoryButton);
+    expect(api.listPrayers).toHaveBeenLastCalledWith("?category=category");
+    expect(categoryButton.getAttribute("aria-pressed")).toBe("true");
+  });
   it("keeps the privacy card unchanged when the cursor moves over it", async () => {
     await render("/privacy");
     const card = host.querySelector<HTMLElement>(".card-spotlight")!;

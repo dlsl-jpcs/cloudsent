@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Link,
   Route,
@@ -6,7 +6,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import type { PublicPrayer, TaxonomyItem } from "@cloudsent/contracts";
+import type { TaxonomyItem } from "@cloudsent/contracts";
 import {
   addTaxonomy,
   adminLogout,
@@ -19,7 +19,6 @@ import {
   editPrayer,
   exportPrayers,
   getTaxonomy,
-  listPrayers,
   purgePrayer,
   resolveReport,
   restorePrayer,
@@ -27,7 +26,11 @@ import {
   updatePrayerStatus,
   updateTaxonomy,
 } from "./api";
-import DriftWall from "./components/DriftWall";
+import SkyWall from "./components/SkyWall";
+import { CategoryIcon } from "./components/SkyPrayerCard";
+import SkyBackdrop from "./components/SkyBackdrop";
+import CloudIcon from "./components/CloudIcon";
+import usePrayerFeed from "./usePrayerFeed";
 import WallFilters from "./components/WallFilters";
 import GlideSelect from "./components/GlideSelect";
 import { palette } from "./palette";
@@ -48,50 +51,17 @@ import DisplayWall from "./DisplayWall";
 
 function Wall() {
   const [params, setParams] = useSearchParams();
-  const [prayers, setPrayers] = useState<PublicPrayer[]>([]);
-  const [meta, setMeta] = useState({
-    hasMore: false,
-    nextCursor: null as string | null,
-  });
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
   const [taxonomy, setTaxonomy] = useState<{
     categories: TaxonomyItem[];
     moods: TaxonomyItem[];
   }>({ categories: [], moods: [] });
   const search = params.toString();
-  const queryRef = useRef(search);
-  queryRef.current = search;
-  const paging = useRef(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [moreError, setMoreError] = useState("");
+  const { prayers, meta, loading, failed, loadingMore, moreError, refreshError, loadMore } = usePrayerFeed(search);
   useEffect(() => {
     getTaxonomy()
       .then((result) => setTaxonomy(result.data))
       .catch(() => undefined);
   }, []);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setFailed(false);
-    setMoreError("");
-    listPrayers(search ? "?" + search : "")
-      .then((result) => {
-        if (active) {
-          setPrayers(result.data);
-          setMeta(result.meta);
-        }
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [search]);
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -99,48 +69,15 @@ function Wall() {
     next.delete("cursor");
     setParams(next);
   };
-  const loadMore = async () => {
-    if (!meta.nextCursor || paging.current) return;
-    const requestedQuery = search;
-    const next = new URLSearchParams(params);
-    next.set("cursor", meta.nextCursor);
-    paging.current = true;
-    setLoadingMore(true);
-    setMoreError("");
-    try {
-      const result = await listPrayers("?" + next);
-      if (queryRef.current === requestedQuery) {
-        setPrayers((current) => [...current, ...result.data]);
-        setMeta(result.meta);
-      }
-    } catch {
-      if (queryRef.current === requestedQuery)
-        setMoreError("More prayers couldn’t be loaded. Please try again.");
-    } finally {
-      paging.current = false;
-      setLoadingMore(false);
-    }
-  };
-  const wallItems = prayers.map((prayer) => ({
-    title: prayer.title,
-    message: prayer.message,
-    meta:
-      (prayer.isAnonymous ? "Anonymous" : prayer.displayName || "Named") +
-      " · " +
-      prayer.category.name +
-      " · " +
-      prayer.mood.name,
-    href: "/prayer/" + prayer.id,
-    color: palette[prayer.color] || palette.cloud,
-  }));
   return (
     <Shell>
-      <main className="page">
-        <div className="page-heading">
+      <main className="page prayer-wall-page">
+        <div className="page-heading sky-wall-heading">
+          <SkyBackdrop />
           <div>
-            <p className="section-kicker">A living archive</p>
-            <h1>Prayer wall</h1>
-            <p>Read a few words, leave a little room around them.</p>
+            <p className="section-kicker"><CloudIcon /> Prayer Wall</p>
+            <h1>A sky full of<br />kind words.</h1>
+            <p>Read, reflect, and be reminded that you’re not alone.</p>
           </div>
           <Link className="button button-primary" to="/submit">
             Send a prayer
@@ -154,10 +91,18 @@ function Wall() {
           onChange={setFilter}
           onClear={() => setParams({})}
         />
+        <div className="sky-category-filters" role="group" aria-label="Filter by category">
+          <button type="button" aria-pressed={!params.get("category")} onClick={() => setFilter("category", "")}>All</button>
+          {taxonomy.categories.map((category) => (
+            <button type="button" key={category.id} aria-pressed={params.get("category") === category.id} onClick={() => setFilter("category", category.id)}>
+              <CategoryIcon name={category.name} />{category.name}
+            </button>
+          ))}
+        </div>
         {loading ? (
           <div className="loading-state" role="status">
             <span className="loading-cloud" aria-hidden="true">
-              ☁
+              <CloudIcon />
             </span>
             Opening the wall…
           </div>
@@ -165,37 +110,9 @@ function Wall() {
           <EmptyState unavailable />
         ) : prayers.length ? (
           <>
-            <div className="drift-wall-intro">
-              <span className="section-kicker">The shared sky</span>
-              <span>
-                Hover or focus a tile to pause it. Select one to read the full
-                prayer.
-              </span>
-            </div>
-            <div className="drift-wall-shell">
-              <DriftWall
-                items={wallItems}
-                radius={16}
-                columns={4}
-                tileWidth={230}
-                tileHeight={180}
-                gap={16}
-                tilt={9}
-                turn={-7}
-                perspective={1250}
-                depth={90}
-                speed={22}
-                variance={0.3}
-                parallax={0.42}
-                lift={34}
-                fade={0.3}
-                dim={0.94}
-                overlayColor="#6f83a0"
-              />
-              <div className="sr-only" aria-live="polite">
-                {prayers.length} prayers shown
-              </div>
-            </div>
+            <p className="sky-wall-note">Newest prayers first. Select a card to read its full prayer.</p>
+            <SkyWall prayers={prayers} />
+            {refreshError && <p className="sky-wall-note" role="status">Showing the last loaded prayers. Reconnecting to the sky…</p>}
             {moreError && (
               <p role="alert" className="form-error">
                 {moreError}
@@ -216,6 +133,9 @@ function Wall() {
         ) : (
           <EmptyState filtered={Boolean(search)} />
         )}
+        <div className="wall-bottom-action">
+          <Link className="button button-primary button-small" to="/submit"><CloudIcon /> Send a prayer</Link>
+        </div>
       </main>
     </Shell>
   );

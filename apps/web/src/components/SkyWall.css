@@ -1,0 +1,174 @@
+.sky-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+.sky-cloud {
+  position: absolute;
+  width: clamp(190px, 24vw, 340px);
+  color: #fff;
+  opacity: .6;
+  animation: sky-cloud-drift 110s ease-in-out infinite alternate;
+}
+.sky-cloud-0 { left: -7%; top: 8%; animation-delay: -30s; }
+.sky-cloud-1 { right: -5%; top: 30%; width: 280px; animation-duration: 140s; animation-delay: -70s; }
+.sky-cloud-2 { left: 32%; top: 56%; opacity: .45; animation-delay: -90s; }
+.sky-cloud-3 { left: -10%; top: 77%; animation-duration: 130s; animation-delay: -45s; }
+.sky-cloud-4 { right: 16%; top: 2%; width: 220px; opacity: .35; animation-delay: -65s; }
+.sky-cloud-5 { right: -4%; bottom: 4%; animation-duration: 95s; animation-delay: -20s; }
+.sky-sparkle { position: absolute; width: 14px; height: 14px; color: #d5ad58; opacity: .55; animation: sky-twinkle 12s ease-in-out infinite alternate; }
+.sky-sparkle-0 { left: 8%; top: 23%; }
+.sky-sparkle-1 { left: 37%; top: 9%; width: 10px; animation-delay: -3s; }
+.sky-sparkle-2 { right: 4%; top: 47%; animation-delay: -8s; }
+.sky-sparkle-3 { left: 2%; top: 70%; width: 10px; animation-delay: -5s; }
+.sky-sparkle-4 { right: 27%; top: 79%; }
+.sky-sparkle-5 { left: 52%; top: 44%; color: #9bbad5; width: 9px; }
+.sky-sparkle-6 { right: 18%; top: 17%; animation-delay: -6s; }
+.sky-sparkle-7 { left: 29%; bottom: 3%; color: #9bbad5; width: 10px; }
+.sky-cloud-bank { position: absolute; bottom: -1px; width: 100%; height: 95px; color: #f6faff; opacity: .9; }
+@keyframes sky-cloud-drift { from { transform: translateX(-45px); } to { transform: translateX(65px); } }
+@keyframes sky-twinkle { from { opacity: .3; } to { opacity: .75; } }
+
+.sky-wall { position: relative; isolation: isolate; padding: 34px 24px 55px; background: linear-gradient(180deg, #e7f3ff80, #edf6ff40); border-radius: 28px; }
+.sky-prayer-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 26px; list-style: none; margin: 0; padding: 0; }
+.sky-prayer-grid > li { min-width: 0; }
+.sky-card-float { height: 100%; transform: rotate(var(--card-angle)); animation: sky-card-float var(--float-duration, 11s) ease-in-out var(--float-delay, 0s) infinite alternate; }
+.sky-card-arrival { height: 100%; }
+.sky-card-arrival.is-arriving { animation: sky-card-settle 1.35s cubic-bezier(.22,1,.36,1) both; }
+.sky-prayer-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 285px;
+  height: 100%;
+  padding: 25px 25px 21px;
+  border: 1px solid #ffffffba;
+  border-radius: 11px 11px 18px 11px;
+  background: linear-gradient(155deg, #ffffff26, #ffffff05), var(--prayer-color, #dceeff);
+  box-shadow: 0 8px 22px #3458790c, 0 2px 5px #34587905;
+  color: #2b4059;
+  text-decoration: none;
+  transition: box-shadow .25s ease;
+}
+a.sky-prayer-card:hover { box-shadow: 0 13px 28px #3458791a; color: #2b4059; }
+.sky-card-float:has(a:hover), .sky-card-float:has(a:focus-visible) { animation-play-state: paused; }
+.sky-card-category { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: #4c6077; padding-right: 20px; }
+.sky-card-category svg, .sky-category-filters svg { width: 19px; height: 19px; flex-shrink: 0; }
+.sky-card-category svg { color: #657c99; }
+.sky-card-cloud { position: absolute; top: 23px; right: 20px; color: #6b88a277; font-size: .95rem; }
+.sky-prayer-card h2 { margin: 20px 0 9px; font-size: 1.48rem; line-height: 1.23; font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sky-card-message { font-family: Spectral, Georgia, serif; font-size: 1.12rem; line-height: 1.52; margin: 12px 0 30px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.sky-prayer-card h2 + .sky-card-message { margin-top: 0; }
+.sky-card-author { font-size: .76rem; line-height: 1.5; color: #52677e; margin: auto 0 0; overflow-wrap: anywhere; }
+@keyframes sky-card-float { from { transform: translateY(0) rotate(var(--card-angle)); } to { transform: translateY(-6px) rotate(calc(var(--card-angle) + .35deg)); } }
+@keyframes sky-card-settle { 0% { opacity: 0; transform: translateY(-48px) scale(.97); } 65% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+.site-shell--sky { background: linear-gradient(180deg, #e7f3ff 0, #f5faff 700px, #f5faff); overflow-x: clip; }
+.site-shell--sky .pill-list { background: transparent; border-color: transparent; gap: 8px; }
+.site-shell--sky .nav-pill { border-radius: 0; min-height: 44px; padding: 10px 17px; background: transparent; }
+.site-shell--sky .nav-pill .hover-circle { display: none; }
+.site-shell--sky .nav-pill.is-active:not(.nav-pill--cta) { background: transparent; box-shadow: none; }
+.site-shell--sky .nav-pill.is-active:not(.nav-pill--cta) .pill-label { border-bottom: 2px solid #4e759b; padding-bottom: 5px; }
+.site-shell--sky .nav-pill:hover { color: #315575; }
+.site-shell--sky .nav-pill--cta { border-radius: 100px; background: #efc567; color: #263d54; padding-inline: 23px; box-shadow: inset 0 -2px 0 #b78b2440; }
+.site-shell--sky .nav-pill--cta.is-active { background: #e9b949; }
+.prayer-wall-page { margin-top: 15px; }
+.sky-wall-heading { position: relative; isolation: isolate; min-height: 275px; padding: 24px 28px 50px; margin: 0 -24px 18px; overflow: hidden; }
+.sky-wall-heading > div:not(.sky-backdrop), .sky-wall-heading > a { position: relative; z-index: 1; }
+.sky-wall-heading h1 { font-size: clamp(2.8rem, 5vw, 4rem); line-height: 1.05; margin: 15px 0 19px; }
+.sky-wall-heading p:not(.section-kicker) { max-width: 350px; font-size: 1.05rem; }
+.sky-wall-heading .sky-cloud-0 { left: 56%; top: 45%; opacity: .85; }
+.sky-wall-heading .sky-cloud-2 { left: 71%; top: 54%; }
+.sky-wall-heading .sky-cloud-4 { display: none; }
+.sky-category-filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 17px; }
+.sky-category-filters button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 17px; border: 1px solid #d9e6f3; border-radius: 100px; color: #496782; background: #ffffffb3; font-size: .86rem; cursor: pointer; }
+.sky-category-filters button[aria-pressed="true"] { background: #4c759b; border-color: #4c759b; color: #fff; }
+.sky-category-filters button:hover:not([aria-pressed="true"]) { background: #fff; border-color: #8daac5; }
+.sky-wall-note { color: #5a7188; font-size: .86rem; margin: 16px 0; }
+.wall-bottom-action { display: flex; justify-content: flex-end; padding: 24px 0 0; }
+.wall-bottom-action .button, .home-sky-invitation .button { gap: 8px; }
+
+.site-shell--sky .home-hero { position: relative; isolation: isolate; grid-template-columns: 1.1fr 1fr; gap: 30px; padding-bottom: 60px; }
+/* One continuous sky, unclipped by the illustration's smaller grid cell. */
+.home-hero > .sky-backdrop { inset: -12px calc(50% - 50vw) -24px; overflow: visible; }
+.home-hero > .sky-backdrop .sky-cloud-0 { left: 48%; top: 35%; opacity: .9; }
+.home-hero > .sky-backdrop .sky-cloud-1 { right: 5%; top: 5%; opacity: .65; }
+.home-hero > .sky-backdrop .sky-cloud-2 { left: 65%; top: 70%; opacity: .7; }
+.home-hero > .sky-backdrop .sky-cloud-3 { left: 14%; top: 76%; opacity: .5; }
+.home-hero > .sky-backdrop .sky-cloud-4 { right: 7%; top: 47%; opacity: .9; }
+.home-hero > .sky-backdrop .sky-cloud-5 { right: 3%; bottom: 4%; opacity: .85; }
+.site-shell--sky .home-copy { position: relative; z-index: 1; }
+.site-shell--sky .home-copy h1 { font-size: clamp(3rem, 5vw, 4.4rem); line-height: 1.07; max-width: 600px; }
+.site-shell--sky .hero-lede { max-width: 360px; }
+.site-shell--sky .letter-scene { min-height: 520px; background: transparent; border-radius: 0; }
+.hero-prayer { position: absolute; width: 62%; max-width: 270px; z-index: 1; animation: sky-card-float 12s ease-in-out infinite alternate; }
+.hero-prayer-one { --card-angle: -8deg; left: 15%; top: 16px; }
+.hero-prayer-two { --card-angle: 8deg; right: -1%; top: 171px; animation-delay: -4s; z-index: 3; }
+.hero-prayer-three { --card-angle: -6deg; left: 1%; top: 267px; animation-delay: -7s; z-index: 2; }
+.hero-prayer .sky-prayer-card { min-height: 225px; padding: 21px; }
+.hero-prayer .sky-prayer-card h2 { font-size: 1.35rem; margin-top: 15px; }
+.hero-prayer .sky-card-message { font-size: 1rem; margin-bottom: 22px; }
+.hero-prayer .sky-card-author { font-size: .7rem; }
+.hero-prayer .sky-card-author > span { display: none; }
+.hero-prayer .sky-card-category { font-size: .73rem; }
+.site-shell--sky .scene-caption { bottom: -13px; }
+.site-shell--sky .home-purpose { border-top: 0; margin-top: 0; padding-top: 38px; }
+.site-shell--sky .guidance-card { border-top: 0; border-radius: 0; padding: 22px 30px; }
+.site-shell--sky .guidance-card + .guidance-card { border-left: 1px solid #d4e1ef; }
+.site-shell--sky .guidance-review { background: transparent; }
+.site-shell--sky .guidance-symbol { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: #dcefff; color: #678ba9; font-size: 1.7rem; }
+.site-shell--sky .guidance-review .guidance-symbol { background: #ffeaf0; color: #b57c92; }
+.home-sky-invitation { position: relative; isolation: isolate; overflow: hidden; border-radius: 22px; padding: 36px 40px; margin-top: 45px; background: #dcefff; }
+.home-sky-invitation > div:not(.sky-backdrop) { position: relative; z-index: 2; }
+.home-sky-invitation h2 { font-size: 2.5rem; margin: 0 0 4px; }
+.home-sky-invitation p { margin: 0 0 20px; }
+.home-sky-invitation .sky-cloud-bank { height: 95px; }
+.home-sky-invitation .sky-cloud-0 { left: 65%; top: 25%; width: 240px; opacity: 1; }
+.invitation-sun { position: absolute; width: 100px; height: 100px; border-radius: 50%; right: 9%; top: 35px; background: #fff0cc; z-index: -1; }
+
+@media (max-width: 1000px) {
+  .sky-prayer-grid { gap: 25px 20px; }
+  .sky-prayer-card { padding: 22px 20px; }
+  .sky-prayer-card h2 { font-size: 1.3rem; }
+  .hero-prayer { width: 66%; }
+  .hero-prayer-two { right: -2%; }
+}
+@media (max-width: 760px) {
+  .sky-prayer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sky-wall { padding: 25px 12px 38px; }
+  .sky-wall-heading { padding: 15px 24px 40px; min-height: 270px; }
+  .sky-wall-heading > .button { display: none; }
+  .site-shell--sky .pill-list.is-open { background: #f8fcff; border: 1px solid #d4e1ef; }
+  .site-shell--sky .home-hero { grid-template-columns: 1fr; gap: 15px; padding-bottom: 40px; }
+  .site-shell--sky .home-copy h1 { max-width: 540px; }
+  .site-shell--sky .letter-scene { min-height: 510px; max-width: 500px; width: 100%; margin: 10px auto 0; }
+  .hero-prayer { width: 58%; }
+  .site-shell--sky .guidance-card + .guidance-card { border-left: 0; border-top: 1px solid #d4e1ef; }
+  .home-sky-invitation { padding: 28px; }
+}
+@media (max-width: 480px) {
+  .sky-prayer-grid { grid-template-columns: minmax(0, 1fr); gap: 23px; }
+  .sky-prayer-card { min-height: 260px; padding: 25px; }
+  .sky-prayer-card h2 { font-size: 1.5rem; }
+  .sky-wall-heading h1 { font-size: 2.9rem; }
+  .sky-category-filters { gap: 7px; }
+  .sky-category-filters button { font-size: .8rem; padding-inline: 12px; }
+  .sky-category-filters svg { width: 16px; }
+  .hero-prayer { width: 66%; }
+  .hero-prayer-one { left: 16%; }
+  .hero-prayer-two { right: -1%; top: 168px; }
+  .hero-prayer-three { top: 288px; left: 0; }
+  .hero-prayer .sky-prayer-card { min-height: 215px; padding: 18px; }
+  .hero-prayer .sky-prayer-card h2 { font-size: 1.15rem; }
+  .hero-prayer .sky-card-message { font-size: .9rem; }
+  .hero-prayer .sky-card-category { font-size: .65rem; gap: 5px; }
+  .site-shell--sky .letter-scene { min-height: 540px; }
+  .home-sky-invitation h2 { font-size: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-cloud, .sky-sparkle, .sky-card-float, .sky-card-arrival.is-arriving, .hero-prayer { animation: none; }
+  .hero-prayer { transform: rotate(var(--card-angle)); }
+  .sky-prayer-card { transition: none; }
+}
