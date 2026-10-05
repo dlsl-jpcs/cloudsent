@@ -4,9 +4,12 @@ import { Link, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 
 const items = [
-  { href: "/wall", label: "Prayer wall" },
-  { href: "/submit", label: "Send a prayer" },
+  { href: "/", label: "Home" },
+  { href: "/wall", label: "Prayer Wall" },
+  { href: "/submit", label: "Send a Prayer" },
 ];
+
+const isCurrent = (pathname: string, href: string) => href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
 
 export default function PillNav() {
   const { pathname } = useLocation();
@@ -66,8 +69,8 @@ export default function PillNav() {
           <Link
             key={item.href}
             to={item.href}
-            className={`nav-pill ${pathname.startsWith(item.href) ? "is-active" : ""}`}
-            aria-current={pathname.startsWith(item.href) ? "page" : undefined}
+            className={`nav-pill ${isCurrent(pathname, item.href) ? "is-active" : ""} ${item.href === "/submit" ? "nav-pill--cta" : ""}`}
+            aria-current={isCurrent(pathname, item.href) ? "page" : undefined}
             onClick={() => setOpen(false)}
             onMouseEnter={(event) => animate(event.currentTarget, true)}
             onMouseLeave={(event) => animate(event.currentTarget, false)}

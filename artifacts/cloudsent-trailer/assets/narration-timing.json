@@ -1,0 +1,48 @@
+{
+  "voice": "en-PH-RosaNeural",
+  "sampleRate": 48000,
+  "scenes": [
+    {
+      "scene": 1,
+      "start": 0.65,
+      "end": 2.896,
+      "text": "Some prayers are lighter together.",
+      "tempo": 1
+    },
+    {
+      "scene": 2,
+      "start": 4.85,
+      "end": 6.632,
+      "text": "Welcome to CloudSent.",
+      "tempo": 1
+    },
+    {
+      "scene": 3,
+      "start": 8.35,
+      "end": 13.839,
+      "text": "Write a prayer. Make it yours. Then send it for review.",
+      "tempo": 1
+    },
+    {
+      "scene": 4,
+      "start": 15.0,
+      "end": 20.78,
+      "text": "Anonymous by default. Reviewed with care. Shared with our community.",
+      "tempo": 1.093
+    },
+    {
+      "scene": 5,
+      "start": 21.9,
+      "end": 24.413,
+      "text": "A shared moment across our school.",
+      "tempo": 1
+    },
+    {
+      "scene": 6,
+      "start": 25.55,
+      "end": 28.851,
+      "text": "CloudSent. Leave a little hope.",
+      "tempo": 1
+    }
+  ]
+}

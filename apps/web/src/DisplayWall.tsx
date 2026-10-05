@@ -3,6 +3,8 @@ import type { PublicPrayer } from "@cloudsent/contracts";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "react-router-dom";
 import { listPrayers } from "./api";
+import SkyBackdrop from "./components/SkyBackdrop";
+import CloudIcon from "./components/CloudIcon";
 import DriftWall from "./components/DriftWall";
 import SpotlightCard from "./components/SpotlightCard";
 import CopyrightNotice from "./components/CopyrightNotice";
@@ -122,6 +124,7 @@ export default function DisplayWall() {
           aria-label="Public prayers"
         >
           <h1 className="sr-only">Prayer wall</h1>
+          <SkyBackdrop />
           {prayers.length ? (
             <DriftWall
               items={items}
@@ -145,7 +148,7 @@ export default function DisplayWall() {
             />
           ) : (
             <div className="display-state" role="status">
-              <span aria-hidden="true">☁</span>
+              <span aria-hidden="true"><CloudIcon /></span>
               <h2>
                 {loading
                   ? "Opening the prayer wall…"
@@ -189,7 +192,7 @@ export default function DisplayWall() {
           </svg>
           <div className="display-brand">
             <span className="display-brand-cloud" aria-hidden="true">
-              ☁
+              <CloudIcon />
             </span>{" "}
             CloudSent
             <span className="brand-parens">()</span>
