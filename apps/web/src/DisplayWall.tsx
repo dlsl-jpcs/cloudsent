@@ -1,21 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PublicPrayer } from "@cloudsent/contracts";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "react-router-dom";
 import { listPrayers } from "./api";
 import SkyBackdrop from "./components/SkyBackdrop";
 import CloudIcon from "./components/CloudIcon";
-import DriftWall from "./components/DriftWall";
+import CategoryPrayerWall from "./components/CategoryPrayerWall";
 import SpotlightCard from "./components/SpotlightCard";
 import CopyrightNotice from "./components/CopyrightNotice";
-import { palette } from "./palette";
 import { displaySamples } from "./displaySamples";
 import "./DisplayWall.css";
 
 const REFRESH_MS = 30_000;
-const TILE_WIDTH = 230;
-const TILE_HEIGHT = 180;
-const TILE_GAP = 16;
 
 export default function DisplayWall() {
   const [params] = useSearchParams();
@@ -25,7 +21,7 @@ export default function DisplayWall() {
   );
   const [loading, setLoading] = useState(!demo);
   const [unavailable, setUnavailable] = useState(false);
-  const [columns, setColumns] = useState(3);
+  const [wallSize, setWallSize] = useState({ width: 0, height: 0 });
   const wallRef = useRef<HTMLElement>(null);
   // Only the public homepage is encoded, never /view or a private admin route.
   const websiteUrl = new URL("/", window.location.origin).href;
@@ -44,12 +40,10 @@ export default function DisplayWall() {
   useEffect(() => {
     if (!wallRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
-      setColumns(
-        Math.max(
-          1,
-          Math.min(8, Math.ceil(entry.contentRect.width / (TILE_WIDTH + TILE_GAP))),
-        ),
-      );
+      setWallSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
     });
     observer.observe(wallRef.current);
     return () => observer.disconnect();
@@ -72,7 +66,7 @@ export default function DisplayWall() {
       try {
         const result = await listPrayers("?limit=48");
         if (active) {
-          // Avoid resetting the drift positions if the public records haven't changed.
+          // Keep the category lanes settled when the public records haven't changed.
           setPrayers((current) =>
             JSON.stringify(current) === JSON.stringify(result.data)
               ? current
@@ -104,17 +98,6 @@ export default function DisplayWall() {
     };
   }, [demo]);
 
-  const items = useMemo(
-    () =>
-      prayers.map((prayer) => ({
-        title: prayer.title,
-        message: prayer.message,
-        meta: `${prayer.isAnonymous ? "Anonymous" : prayer.displayName || "Named"} · ${prayer.category.name}`,
-        color: palette[prayer.color] || palette.cloud,
-      })),
-    [prayers],
-  );
-
   return (
     <div className="display-shell">
       <main className="display-page" aria-label="CloudSent school prayer wall">
@@ -126,25 +109,10 @@ export default function DisplayWall() {
           <h1 className="sr-only">Prayer wall</h1>
           <SkyBackdrop />
           {prayers.length ? (
-            <DriftWall
-              items={items}
-              columns={columns}
-              tileWidth={TILE_WIDTH}
-              tileHeight={TILE_HEIGHT}
-              radius={16}
-              gap={TILE_GAP}
-              tilt={9}
-              turn={-7}
-              perspective={1250}
-              depth={90}
-              speed={10}
-              variance={0.18}
-              parallax={0}
-              lift={0}
-              fade={0.12}
-              dim={1}
-              interactive={false}
-              className="display-drift"
+            <CategoryPrayerWall
+              prayers={prayers}
+              wallWidth={wallSize.width}
+              wallHeight={wallSize.height}
             />
           ) : (
             <div className="display-state" role="status">

@@ -91,25 +91,22 @@ describe("school display", () => {
     expect(host.querySelectorAll(".copyright-notice")).toHaveLength(1);
     expect(host.querySelector(".display-page")?.nextElementSibling).toBe(notice.parentElement);
   });
-  it("matches the regular wall's smaller cards and fills the available width responsively", async () => {
+  it("groups prayers into category lanes and scales card height with the count", async () => {
     await render("/view?demo=1");
-    const wall = host.querySelector<HTMLElement>(".drift-wall")!;
-    expect(wall.style.getPropertyValue("--dw-tile-w")).toBe("230px");
-    expect(wall.style.getPropertyValue("--dw-tile-h")).toBe("180px");
-    expect(wall.style.getPropertyValue("--dw-gap")).toBe("16px");
-    for (const [width, columns] of [
-      [1280, 6],
-      [720, 3],
-      [220, 1],
-      [6000, 8],
-    ]) {
-      await act(async () => {
-        resizeWall(
-          [{ contentRect: { width } } as ResizeObserverEntry],
-          {} as ResizeObserver,
-        );
-      });
-      expect(host.querySelectorAll(".drift-wall__col")).toHaveLength(columns);
+    await act(async () => {
+      resizeWall(
+        [{ contentRect: { width: 1280, height: 800 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+    });
+    const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
+    expect(wall.style.getPropertyValue("--display-columns")).toBe("5");
+    expect(
+      Number.parseInt(wall.style.getPropertyValue("--display-card-height"), 10),
+    ).toBeLessThan(184);
+    expect(host.querySelectorAll(".display-category-lane")).toHaveLength(5);
+    for (const lane of host.querySelectorAll(".display-category-lane")) {
+      expect(lane.querySelectorAll(".display-category-track > li").length).toBeGreaterThan(0);
     }
   });
   it("frames the QR invitation and keeps decorative cloud artwork out of the reading order", async () => {
@@ -127,24 +124,26 @@ describe("school display", () => {
       "Scan to join",
     );
   });
-  it("uses the regular prayer wall's angle while keeping the display hands-free", async () => {
+  it("keeps category cards hands-free and groups each prayer under its category", async () => {
     await render("/view?demo=1");
-    const frame = vi.mocked(requestAnimationFrame).mock.calls[0][0];
-    await act(async () => frame(0));
-    const wall = host.querySelector<HTMLElement>(".drift-wall")!;
-    const plane = host.querySelector<HTMLElement>(".drift-wall__plane")!;
-    expect(wall.style.getPropertyValue("--dw-perspective")).toBe("1250px");
-    expect(plane.style.transform).toContain("rotateX(9deg)");
-    expect(plane.style.transform).toContain("rotateY(-7deg)");
-    expect(plane.style.transform).toContain("translateZ(-90px)");
+    const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
     expect(
-      host.querySelector(".drift-wall a, .drift-wall [tabindex]"),
+      wall.querySelector("a, [tabindex]"),
     ).toBeNull();
+    const categoryNames = [...wall.querySelectorAll(".display-category-heading > span:first-child")]
+      .map((heading) => heading.textContent);
+    expect(categoryNames).toEqual([
+      "Prayer Intention",
+      "Thanksgiving",
+      "Reflection",
+      "Encouragement",
+      "Memorial Prayer",
+    ]);
   });
   it("shows 40 labeled sample prayers in every color without contacting the database", async () => {
     await render("/view?demo=1");
     expect(
-      host.querySelectorAll('.drift-wall__tile:not([aria-hidden="true"])'),
+      host.querySelectorAll(".display-category-track > li"),
     ).toHaveLength(40);
     expect(new Set(displaySamples.map((sample) => sample.color)).size).toBe(6);
     expect(new Set(displaySamples.map((sample) => sample.title)).size).toBe(40);
@@ -217,12 +216,12 @@ describe("school display", () => {
     expect(
       host.querySelector("header, .site-footer, nav, input, select, button"),
     ).toBeNull();
-    expect(host.querySelector(".drift-wall")).not.toBeNull();
+    expect(host.querySelector(".display-category-wall")).not.toBeNull();
     expect(host.textContent).toContain(prayer.message);
     expect(host.textContent).toContain("Anonymous");
     expect(host.textContent).not.toContain("Must stay private");
     expect(
-      host.querySelector(".drift-wall [tabindex], .drift-wall a"),
+      host.querySelector(".display-category-wall [tabindex], .display-category-wall a"),
     ).toBeNull();
     expect(document.title).toBe("Prayer wall display · CloudSent()");
   });
@@ -259,7 +258,7 @@ describe("school display", () => {
     vi.mocked(api.listPrayers).mockResolvedValue(response([]));
     await tick();
     expect(api.listPrayers).toHaveBeenCalledTimes(2);
-    expect(host.querySelector(".drift-wall")).toBeNull();
+    expect(host.querySelector(".display-category-wall")).toBeNull();
     expect(host.textContent).toContain("A place for your first prayer.");
   });
   it("keeps loaded prayers during a connection failure and recovers", async () => {
