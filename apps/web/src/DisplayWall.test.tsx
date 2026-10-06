@@ -91,7 +91,7 @@ describe("school display", () => {
     expect(host.querySelectorAll(".copyright-notice")).toHaveLength(1);
     expect(host.querySelector(".display-page")?.nextElementSibling).toBe(notice.parentElement);
   });
-  it("groups prayers into category lanes and scales card height with the count", async () => {
+  it("groups prayers into ordered category accordions and scales cards with the count", async () => {
     await render("/view?demo=1");
     await act(async () => {
       resizeWall(
@@ -100,13 +100,13 @@ describe("school display", () => {
       );
     });
     const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
-    expect(wall.style.getPropertyValue("--display-columns")).toBe("5");
+    expect(wall.style.getPropertyValue("--display-columns")).toBe("4");
     expect(
       Number.parseInt(wall.style.getPropertyValue("--display-card-height"), 10),
     ).toBeLessThan(184);
-    expect(host.querySelectorAll(".display-category-lane")).toHaveLength(5);
-    for (const lane of host.querySelectorAll(".display-category-lane")) {
-      expect(lane.querySelectorAll(".display-category-track > li").length).toBeGreaterThan(0);
+    expect(host.querySelectorAll(".display-category-accordion")).toHaveLength(5);
+    for (const accordion of host.querySelectorAll(".display-category-accordion")) {
+      expect(accordion.querySelectorAll(".display-category-cards > li").length).toBeGreaterThan(0);
     }
   });
   it("frames the QR invitation and keeps decorative cloud artwork out of the reading order", async () => {
@@ -124,14 +124,15 @@ describe("school display", () => {
       "Scan to join",
     );
   });
-  it("keeps category cards hands-free and groups each prayer under its category", async () => {
+  it("keeps prayer cards hands-free and category accordions in wall order", async () => {
     await render("/view?demo=1");
     const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
     expect(
-      wall.querySelector("a, [tabindex]"),
+      wall.querySelector(".display-category-panel a, .display-category-panel [tabindex]"),
     ).toBeNull();
-    const categoryNames = [...wall.querySelectorAll(".display-category-heading > span:first-child")]
-      .map((heading) => heading.textContent);
+    const categoryNames = [...wall.querySelectorAll(".display-category-name")].map(
+      (heading) => heading.textContent,
+    );
     expect(categoryNames).toEqual([
       "Prayer Intention",
       "Thanksgiving",
@@ -143,7 +144,7 @@ describe("school display", () => {
   it("shows 40 labeled sample prayers in every color without contacting the database", async () => {
     await render("/view?demo=1");
     expect(
-      host.querySelectorAll(".display-category-track > li"),
+      host.querySelectorAll(".display-category-cards > li"),
     ).toHaveLength(40);
     expect(new Set(displaySamples.map((sample) => sample.color)).size).toBe(6);
     expect(new Set(displaySamples.map((sample) => sample.title)).size).toBe(40);
