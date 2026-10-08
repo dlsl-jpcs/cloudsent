@@ -44,6 +44,53 @@
     transparent 60%
   );
 }
+.display-drift {
+  z-index: 1;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  -webkit-mask-image: linear-gradient(transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(transparent, #000 7%, #000 93%, transparent);
+}
+.display-drift .drift-wall__plane { cursor: default; }
+.display-drift .drift-wall__inner {
+  border: 1px solid #ffffffba;
+  box-shadow: 0 8px 22px #34587912;
+}
+.display-drift .sky-prayer-card {
+  min-height: 0;
+  border: 0;
+  padding: calc(18px * var(--display-card-scale));
+}
+.display-drift .sky-card-category {
+  gap: calc(5px * var(--display-card-scale));
+  padding-right: calc(16px * var(--display-card-scale));
+  font-size: calc(.66rem * var(--display-card-scale));
+}
+.display-drift .sky-card-category svg {
+  width: calc(15px * var(--display-card-scale));
+  height: calc(15px * var(--display-card-scale));
+}
+.display-drift .sky-card-cloud {
+  top: calc(18px * var(--display-card-scale));
+  right: calc(15px * var(--display-card-scale));
+  font-size: calc(.8rem * var(--display-card-scale));
+}
+.display-drift .sky-prayer-card h2 {
+  margin: calc(13px * var(--display-card-scale)) 0 calc(6px * var(--display-card-scale));
+  font-size: calc(1.12rem * var(--display-card-scale));
+}
+.display-drift .sky-card-message {
+  margin: calc(10px * var(--display-card-scale)) 0;
+  font-size: calc(.94rem * var(--display-card-scale));
+  line-height: 1.4;
+  -webkit-line-clamp: 4;
+}
+.display-drift .sky-card-author {
+  padding-top: calc(8px * var(--display-card-scale));
+  font-size: calc(.63rem * var(--display-card-scale));
+}
+.display-connection { z-index: 2; }
 .display-invitation {
   position: relative;
   isolation: isolate;

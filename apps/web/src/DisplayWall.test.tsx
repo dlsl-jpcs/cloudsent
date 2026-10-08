@@ -54,6 +54,7 @@ beforeEach(() => {
     vi.fn(() => 1),
   );
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  vi.spyOn(Math, "random").mockReturnValue(0.25);
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
   vi.mocked(api.listPrayers).mockResolvedValue(response([prayer]));
   host = document.createElement("div");
@@ -91,7 +92,7 @@ describe("school display", () => {
     expect(host.querySelectorAll(".copyright-notice")).toHaveLength(1);
     expect(host.querySelector(".display-page")?.nextElementSibling).toBe(notice.parentElement);
   });
-  it("groups prayers into ordered category accordions and scales cards with the count", async () => {
+  it("keeps exactly five drift columns and fits cards to the available space", async () => {
     await render("/view?demo=1");
     await act(async () => {
       resizeWall(
@@ -99,14 +100,38 @@ describe("school display", () => {
         {} as ResizeObserver,
       );
     });
-    const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
-    expect(wall.style.getPropertyValue("--display-columns")).toBe("4");
-    expect(
-      Number.parseInt(wall.style.getPropertyValue("--display-card-height"), 10),
-    ).toBeLessThan(184);
-    expect(host.querySelectorAll(".display-category-accordion")).toHaveLength(5);
-    for (const accordion of host.querySelectorAll(".display-category-accordion")) {
-      expect(accordion.querySelectorAll(".display-category-cards > li").length).toBeGreaterThan(0);
+    const wall = host.querySelector<HTMLElement>(".display-drift")!;
+    const wideCardWidth = Number.parseFloat(wall.style.getPropertyValue("--dw-tile-w"));
+    expect(wideCardWidth).toBeLessThanOrEqual(216);
+    expect(host.querySelectorAll(".drift-wall__col")).toHaveLength(5);
+    for (const column of host.querySelectorAll(".drift-wall__col")) {
+      expect(column.querySelectorAll(".drift-wall__tile").length).toBeGreaterThan(0);
+    }
+    await act(async () => {
+      resizeWall(
+        [{ contentRect: { width: 360, height: 550 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+    });
+    const narrowCardWidth = Number.parseFloat(wall.style.getPropertyValue("--dw-tile-w"));
+    const gap = Number.parseFloat(wall.style.getPropertyValue("--dw-gap"));
+    expect(narrowCardWidth).toBeLessThan(wideCardWidth);
+    expect(5 * (narrowCardWidth + gap)).toBeLessThan(360);
+    expect(host.querySelectorAll(".drift-wall__col")).toHaveLength(5);
+  });
+  it.each([1, 2, 3, 4])("fills five lanes using only existing prayers when there are %i records", async (count) => {
+    const records = Array.from({ length: count }, (_, index) => ({
+      ...prayer, id: `sparse-${index}`, title: `Prayer ${index}`,
+    }));
+    vi.mocked(api.listPrayers).mockResolvedValue(response(records));
+    await render();
+    expect(host.querySelectorAll(".drift-wall__col")).toHaveLength(5);
+    expect(host.querySelectorAll('.drift-wall__tile:not([aria-hidden="true"])')).toHaveLength(count);
+    const ids = new Set(records.map((record) => record.id));
+    for (const column of host.querySelectorAll(".drift-wall__col")) {
+      const tiles = column.querySelectorAll(".drift-wall__tile");
+      expect(tiles.length).toBeGreaterThan(1);
+      for (const tile of tiles) expect(ids.has(tile.getAttribute("data-item-id")!)).toBe(true);
     }
   });
   it("frames the QR invitation and keeps decorative cloud artwork out of the reading order", async () => {
@@ -124,27 +149,56 @@ describe("school display", () => {
       "Scan to join",
     );
   });
-  it("keeps prayer cards hands-free and category accordions in wall order", async () => {
+  it("randomizes prayer placement and keeps it stable through resizing and unchanged polling", async () => {
     await render("/view?demo=1");
-    const wall = host.querySelector<HTMLElement>(".display-category-wall")!;
-    expect(
-      wall.querySelector(".display-category-panel a, .display-category-panel [tabindex]"),
-    ).toBeNull();
-    const categoryNames = [...wall.querySelectorAll(".display-category-name")].map(
-      (heading) => heading.textContent,
+    const wall = host.querySelector<HTMLElement>(".display-drift")!;
+    expect(wall.querySelector("a, [tabindex], button")).toBeNull();
+    const columnIds = () => [...wall.querySelectorAll(".drift-wall__col")].map((column) =>
+      [...column.querySelectorAll('.drift-wall__tile:not([aria-hidden="true"])')].map((tile) =>
+        tile.getAttribute("data-item-id"),
+      ),
     );
-    expect(categoryNames).toEqual([
-      "Prayer Intention",
-      "Thanksgiving",
-      "Reflection",
-      "Encouragement",
-      "Memorial Prayer",
-    ]);
+    const columns = columnIds();
+    const shuffledOrder = Array.from({ length: 8 }, (_, row) => columns.map((column) => column[row])).flat();
+    const sourceOrder = displaySamples.map((sample) => sample.id);
+    expect(shuffledOrder).not.toEqual(sourceOrder);
+    expect([...shuffledOrder].sort()).toEqual([...sourceOrder].sort());
+    await act(async () => {
+      resizeWall(
+        [{ contentRect: { width: 1000, height: 750 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+    });
+    expect(columnIds()).toEqual(columns);
+
+    // Check the live path as well: repeated API responses must not rebuild tracks.
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    vi.mocked(api.listPrayers).mockResolvedValue(response(displaySamples));
+    await render();
+    const tracks = [...host.querySelectorAll(".drift-wall__track")];
+    const initialTiles = tracks.map((track) => [...track.children]);
+    await tick();
+    expect(api.listPrayers).toHaveBeenCalledTimes(2);
+    tracks.forEach((track, index) => expect([...track.children]).toEqual(initialTiles[index]));
+  });
+  it("settles the angled tracks immediately and stops frame scheduling for reduced motion", async () => {
+    await render("/view?demo=1");
+    const plane = host.querySelector<HTMLElement>(".drift-wall__plane")!;
+    expect(plane.style.transform).toContain("rotateZ(-4deg)");
+    for (const track of host.querySelectorAll<HTMLElement>(".drift-wall__track")) {
+      expect(track.style.transform).toMatch(/^translate3d\(0, -?\d/);
+    }
+    const raf = vi.mocked(requestAnimationFrame);
+    const callback = raf.mock.calls.at(-1)![0];
+    raf.mockClear();
+    callback(1000);
+    expect(raf).not.toHaveBeenCalled();
   });
   it("shows 40 labeled sample prayers in every color without contacting the database", async () => {
     await render("/view?demo=1");
     expect(
-      host.querySelectorAll(".display-category-cards > li"),
+      host.querySelectorAll('.drift-wall__tile:not([aria-hidden="true"])'),
     ).toHaveLength(40);
     expect(new Set(displaySamples.map((sample) => sample.color)).size).toBe(6);
     expect(new Set(displaySamples.map((sample) => sample.title)).size).toBe(40);
@@ -217,12 +271,12 @@ describe("school display", () => {
     expect(
       host.querySelector("header, .site-footer, nav, input, select, button"),
     ).toBeNull();
-    expect(host.querySelector(".display-category-wall")).not.toBeNull();
+    expect(host.querySelector(".display-drift")).not.toBeNull();
     expect(host.textContent).toContain(prayer.message);
     expect(host.textContent).toContain("Anonymous");
     expect(host.textContent).not.toContain("Must stay private");
     expect(
-      host.querySelector(".display-category-wall [tabindex], .display-category-wall a"),
+      host.querySelector(".display-drift [tabindex], .display-drift a"),
     ).toBeNull();
     expect(document.title).toBe("Prayer wall display · CloudSent()");
   });
@@ -259,7 +313,7 @@ describe("school display", () => {
     vi.mocked(api.listPrayers).mockResolvedValue(response([]));
     await tick();
     expect(api.listPrayers).toHaveBeenCalledTimes(2);
-    expect(host.querySelector(".display-category-wall")).toBeNull();
+    expect(host.querySelector(".display-drift")).toBeNull();
     expect(host.textContent).toContain("A place for your first prayer.");
   });
   it("keeps loaded prayers during a connection failure and recovers", async () => {

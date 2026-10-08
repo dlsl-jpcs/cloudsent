@@ -14,6 +14,11 @@ https://github.com/DavidHDev/react-bits/blob/main/src/ts-default/Animations/Anim
 `apps/web/src/components/GlideSelect.tsx` and `GlideSelect.css` are adapted from:
 https://github.com/DavidHDev/react-bits/tree/main/src/ts-default/Micro/GlideSelect
 
+`apps/web/src/components/DriftWall.tsx` and `DriftWall.css` are adapted from
+the React Bits DriftWall source supplied for CloudSent. Adaptations include
+five fixed columns, viewport-anchored looping tracks, public prayer cards,
+responsive sizing, randomized placement, and reduced-motion support.
+
 ## MIT + Commons Clause License Condition v1.0
 
 `PillNav.tsx`, `SpotlightCard.tsx`, `Stepper.tsx`, `CountUp.tsx`, and their styles are adapted from React Bits:

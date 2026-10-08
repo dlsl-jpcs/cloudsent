@@ -1,17 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { PublicPrayer } from "@cloudsent/contracts";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "react-router-dom";
 import { listPrayers } from "./api";
 import SkyBackdrop from "./components/SkyBackdrop";
 import CloudIcon from "./components/CloudIcon";
-import CategoryPrayerWall from "./components/CategoryPrayerWall";
+import DriftWall from "./components/DriftWall";
+import SkyPrayerCard from "./components/SkyPrayerCard";
 import SpotlightCard from "./components/SpotlightCard";
 import CopyrightNotice from "./components/CopyrightNotice";
 import { displaySamples } from "./displaySamples";
 import "./DisplayWall.css";
 
 const REFRESH_MS = 30_000;
+const DISPLAY_COLUMNS = 5;
+
+function shufflePrayers(prayers: PublicPrayer[], seed: number) {
+  const shuffled = [...prayers];
+  let state = seed;
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const target = Math.floor((state / 0x100000000) * (index + 1));
+    [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
+  }
+  return shuffled;
+}
 
 export default function DisplayWall() {
   const [params] = useSearchParams();
@@ -22,7 +35,20 @@ export default function DisplayWall() {
   const [loading, setLoading] = useState(!demo);
   const [unavailable, setUnavailable] = useState(false);
   const [wallSize, setWallSize] = useState({ width: 0, height: 0 });
+  // Randomize once per visit; resizing and unchanged refreshes keep the same order.
+  const [shuffleSeed] = useState(() => Math.floor(Math.random() * 0x100000000));
   const wallRef = useRef<HTMLElement>(null);
+  const driftItems = useMemo(() => shufflePrayers(prayers, shuffleSeed).map((prayer) => ({
+    id: prayer.id,
+    title: prayer.title,
+    content: <SkyPrayerCard prayer={prayer} interactive={false} />,
+  })), [prayers, shuffleSeed]);
+  const width = wallSize.width || 1200;
+  const height = wallSize.height || 800;
+  const gap = Math.max(4, Math.min(14, width / 80));
+  const tileWidth = Math.max(28, Math.min(216, width * 0.9 / DISPLAY_COLUMNS - gap));
+  const visibleRows = Math.max(2, Math.min(3, Math.ceil(prayers.length / DISPLAY_COLUMNS)));
+  const tileHeight = Math.max(64, Math.min(210, tileWidth * 1.12, height * 0.9 / visibleRows - gap));
   // Only the public homepage is encoded, never /view or a private admin route.
   const websiteUrl = new URL("/", window.location.origin).href;
   const localPreview = ["localhost", "127.0.0.1", "[::1]"].includes(
@@ -66,7 +92,7 @@ export default function DisplayWall() {
       try {
         const result = await listPrayers("?limit=48");
         if (active) {
-          // Keep the category lanes settled when the public records haven't changed.
+          // Keep the shuffled columns drifting when the public records haven't changed.
           setPrayers((current) =>
             JSON.stringify(current) === JSON.stringify(result.data)
               ? current
@@ -109,10 +135,25 @@ export default function DisplayWall() {
           <h1 className="sr-only">Prayer wall</h1>
           <SkyBackdrop />
           {prayers.length ? (
-            <CategoryPrayerWall
-              prayers={prayers}
-              wallWidth={wallSize.width}
-              wallHeight={wallSize.height}
+            <DriftWall
+              items={driftItems}
+              columns={DISPLAY_COLUMNS}
+              tileWidth={tileWidth}
+              tileHeight={tileHeight}
+              gap={gap}
+              radius={14}
+              tilt={7}
+              turn={-5}
+              roll={-4}
+              depth={0}
+              scale={1}
+              speed={14}
+              variance={0.25}
+              parallax={0}
+              interactive={false}
+              dim={1}
+              className="display-drift"
+              style={{ "--display-card-scale": Math.min(1, tileWidth / 216) } as CSSProperties}
             />
           ) : (
             <div className="display-state" role="status">

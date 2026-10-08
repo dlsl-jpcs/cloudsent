@@ -11,8 +11,9 @@
   mask-image: radial-gradient(ellipse 80% 88% at 50% 48%, #000 var(--dw-edge), transparent 100%);
 }
 
-.drift-wall__plane { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: row; transform-style: preserve-3d; cursor: pointer; transform-origin: 50% 50%; will-change: transform; }
-.drift-wall__col { position: relative; width: calc(var(--dw-tile-w) + var(--dw-gap)); transform-style: preserve-3d; }
+/* Center the viewport-sized plane, not the arbitrarily long repeated tracks. */
+.drift-wall__plane { position: absolute; top: 50%; left: 50%; height: 100%; display: flex; flex-direction: row; transform-style: preserve-3d; cursor: pointer; transform-origin: 50% 50%; will-change: transform; }
+.drift-wall__col { position: relative; flex: 0 0 calc(var(--dw-tile-w) + var(--dw-gap)); width: calc(var(--dw-tile-w) + var(--dw-gap)); transform-style: preserve-3d; }
 .drift-wall__track { display: flex; flex-direction: column; will-change: transform; transform-style: preserve-3d; }
 .drift-wall__tile { position: relative; display: block; width: 100%; height: calc(var(--dw-tile-h) + var(--dw-gap)); flex: 0 0 auto; outline: none; transform-style: preserve-3d; text-decoration: none; color: #22364c; }
 .drift-wall__inner { position: absolute; inset: calc(var(--dw-gap) / 2); display: flex; flex-direction: column; justify-content: space-between; border-radius: var(--dw-radius); overflow: hidden; background: #fff; opacity: var(--dw-dim); transform: translateZ(0); pointer-events: none; box-shadow: 0 8px 24px rgba(74, 105, 133, 0.12); transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
