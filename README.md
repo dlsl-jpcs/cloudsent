@@ -67,7 +67,7 @@ The dashboard refreshes every 30 seconds while visible and when returning to the
 
 ## School display
 
-Open `/view` on the school display and use your browser's full-screen mode (F11 on Windows). It shows only the drifting prayer wall and a QR code on the right, without menus, filters, or a footer. On small portrait screens the QR panel moves below the wall.
+Open `/view` on the school display and use your browser's full-screen mode (F11 on Windows). It shows five drifting prayer columns, a QR code on the right, and the JPCS DLSL copyright below, without menus or filters. Prayer placement is randomized per visit and stays steady through unchanged automatic refreshes. With fewer than five prayers, existing cards repeat to fill all five columns; no extra records are created. Card sizes adjust to the available space and prayer count. On small portrait screens the QR panel moves below the wall while the wall keeps five columns.
 
 The display shows the latest 48 approved public prayers, checks for updates every 30 seconds while visible, and refreshes when the connection returns or the tab becomes visible. If a refresh fails, the last loaded prayers remain visible until reconnection. Motion follows the viewer's reduced-motion preference.
 
